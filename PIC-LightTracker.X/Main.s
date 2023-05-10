@@ -30,19 +30,27 @@ INT_VECT:
     RETFIE
 
 ; program variables
-W_REG		EQU 0
-F_REG		EQU 1
+STP_STEPS	EQU 0x20
+STP_DELAY	EQU 0x21
+STP_ACCEL	EQU 0x22
+STP_MAXSPEED	EQU 0x23
+STP_MINSPEED	EQU 0x24
+SENSITIVITY_1	EQU 0x25
+SENSITIVITY_2	EQU 0x26
 
 ; program setup
 setup:
     
     ; configuration of inputs/outputs pins
     BANKSEL TRISA
-    MOVLW   0b00001111		; configuration of the first 4 pins of port-A as analog input
+    MOVLW   0b00001111		; configuration of the first 4 pins of port-A as input
     MOVWF   TRISA
     BANKSEL TRISB
     MOVLW   0b00000000		; configuration of the first 4 pins of port-B as digital output
     MOVWF   TRISB
+    BANKSEL ANSELH
+    MOVLW   0b00001111		; enable analog inputs on AN0 and AN1
+    MOVWF   ANSELH
     
     ; configuration of ADC
     BANKSEL ADCON0
@@ -78,7 +86,7 @@ waitForADC:
     ; control stepper motors according to light intensity measured by LDR sensors
     ; stepper motor 1
     MOVF    ADRESH, W		; read the converted value
-    SUBWF   #SENSITIVITY_1, W	; subtract sensor sensitivity 1
+    SUBWF   SENSITIVITY_1, W	; subtract sensor sensitivity 1
     BTFSC   STATUS, C		; if the result is negative, sensor 1 is dark
     CALL    rotateLeft		; rotate the stepper motor to the left
     BTFSS   STATUS, C		; if the result is positive, sensor 1 is illuminated
@@ -86,7 +94,7 @@ waitForADC:
     
     ; stepper motor 2
     MOVF    ADRESH, W		; read the converted value
-    SUBWF   #SENSITIVITY_2, W	; subtract sensor sensitivity 2
+    SUBWF   SENSITIVITY_2, W	; subtract sensor sensitivity 2
     BTFSC   STATUS, C		; if the result is negative, sensor 2 is dark
     CALL    rotateUp		; rotate the stepper motor up
     BTFSS   STATUS, C		; if the result is positive, sensor 2 is illuminated
