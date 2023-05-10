@@ -32,13 +32,6 @@ INT_VECT:
 ; program variables
 W_REG		EQU 0
 F_REG		EQU 1
-#SENSITIVITY_1	EQU 0x20
-#SENSITIVITY_2	EQU 0x21
-STP_STEPS	EQU 0x22    ; number of steps per revolution
-STP_DELAY	EQU 0x23    ; delay between steps
-STP_ACCEL	EQU 0x24    ; initial acceleration
-STP_MAXSPEED	EQU 0x25    ; maximum speed
-STP_MINSPEED	EQU 0x26    ; minimum speed
 
 ; program setup
 setup:
