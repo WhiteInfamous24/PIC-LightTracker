@@ -47,18 +47,15 @@ setup:
     MOVWF   ANSELH
 
     ; ADC configuration
-    BANKSEL ADCON1
-    CLRF    ADCON1		; set all pins as analog inputs
-    MOVLW   0b00000010		; select the reference voltage source (VDD and VSS)
     BANKSEL ADCON0
-    MOVWF   ADCON0		; set the ADC in single conversion mode and select channel AN0
+    MOVLW   0b10000001		; set all pins as analog inputs
+    MOVWF   ADCON0		; select the reference voltage source (VDD and VSS)
+    BANKSEL ADCON1
+    MOVLW   0b00000110		; set the ADC in single conversion mode and select channel AN0
+    MOVWF   ADCON1
 
 ; main program loop
 main:
-    
-    ; turn off the LEDs
-    BCF	    PORTB, 0		; turn off the LED on RB0
-    BCF	    PORTB, 1		; turn off the LED on RB1
     
     ; measure the voltage on pin AN0
     BANKSEL ADCON0
@@ -82,9 +79,13 @@ main:
     MOVF    AN0_VALUE, 0
     SUBWF   AN1_VALUE, 0	; subtract AN1_VALUE from AN0_VALUE
     BTFSC   STATUS, 0		; if the result is positive or zero, turn on the LED in RB0
+    BCF     PORTB, 0
+    BTFSS   STATUS, 0		; if the result is positive or zero, turn on the LED in RB0
     BSF     PORTB, 0
-    BTFSS   STATUS, 0		; if the result is negative, turn on the LED on RB1
+    BTFSC   STATUS, 0		; if the result is negative, turn on the LED on RB1
     BSF     PORTB, 1
+    BTFSS   STATUS, 0		; if the result is positive or zero, turn on the LED in RB0
+    BCF     PORTB, 1
     
     ; return to main program loop
     GOTO    main

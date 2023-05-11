@@ -6,7 +6,7 @@ Linker command line:
   --edf=C:/Users/juanm/.mchp_packs/Microchip/PIC16Fxxx_DFP/1.4.149/xc8\pic\dat\20230322214319_en.msgs \
   -cs -h+dist/default/production\ReadLDRs.X.production.sym \
   --cmf=dist/default/production\ReadLDRs.X.production.cmf -z -Q16F887 \
-  -oC:\Users\juanm\AppData\Local\Temp\xcAs208.\driver_tmp_3.o \
+  -oC:\Users\juanm\AppData\Local\Temp\xcAs15o.\driver_tmp_3.o \
   --fixupoverflow=error -ver=XC8 PIC(R) Assembler --fixupoverflow=lstwarn \
   -Mdist/default/production/ReadLDRs.X.production.map -E1 --acfsm=1493 \
   -ACODE=00h-07FFhx4 -ASTRCODE=00h-01FFFh -ASTRING=00h-0FFhx32 \
@@ -28,13 +28,13 @@ Machine type is 16F887
                 Name                               Link     Load   Length Selector   Space Scale
 build/default/production/Main.o
                 config                             2007     2007        2        0       4
-                INT_VECT                            7D4      7D4       2C      FA8       0
-                RESET_VECT                          7D3      7D3        1      FA6       0
+                INT_VECT                            7D1      7D1       2F      FA2       0
+                RESET_VECT                          7D0      7D0        1      FA0       0
 
 TOTAL           Name                               Link     Load   Length     Space
         CLASS   CODE           
-                INT_VECT                            7D4      7D4       2C         0
-                RESET_VECT                          7D3      7D3        1         0
+                INT_VECT                            7D1      7D1       2F         0
+                RESET_VECT                          7D0      7D0        1         0
 
         CLASS   STRCODE        
 
@@ -77,8 +77,8 @@ TOTAL           Name                               Link     Load   Length     Sp
 
 SEGMENTS        Name                           Load    Length   Top    Selector   Space  Class     Delta
 
-                RESET_VECT                     0007D3  000001  0007D4       FA6       0  CODE        2
-                INT_VECT                       0007D4  00002C  000800       FA8       0  CODE        2
+                RESET_VECT                     0007D0  000001  0007D1       FA0       0  CODE        2
+                INT_VECT                       0007D1  00002F  000800       FA2       0  CODE        2
 
 
 UNUSED ADDRESS RANGES
@@ -88,13 +88,13 @@ UNUSED ADDRESS RANGES
         BANK1            00A0-00EF             50           1
         BANK2            0110-016F             60           1
         BANK3            0190-01EF             60           1
-        CODE             0000-07D2            7D3           2
+        CODE             0000-07CF            7D0           2
                          0800-1FFF            800
         COMMON           0070-007F             10           1
-        CONST            0000-07D2            100           2
+        CONST            0000-07CF            100           2
                          0800-1FFF            100
         EEDATA           2100-21FF            100           2
-        ENTRY            0000-07D2            100           2
+        ENTRY            0000-07CF            100           2
                          0800-1FFF            100
         IDLOC            2000-2003              4           2
         RAM              0020-006F             50           1
@@ -105,9 +105,9 @@ UNUSED ADDRESS RANGES
         SFR1             0080-009F             20           1
         SFR2             0100-010F             10           1
         SFR3             0180-018F             10           1
-        STRCODE          0000-07D2            7D3           2
+        STRCODE          0000-07CF            7D0           2
                          0800-1FFF           1800
-        STRING           0000-07D2            100           2
+        STRING           0000-07CF            100           2
                          0800-1FFF            100
 
                                   Symbol Table
