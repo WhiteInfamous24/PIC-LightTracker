@@ -41,40 +41,33 @@ INT_VECT:
     RETFIE
 
 ; program variables
-W_TMP		    EQU 0x20
-STATUS_TMP	    EQU	0x21
-AN0_VALUE	    EQU 0x22
-AN1_VALUE	    EQU 0x23
-STP_DLAY_CTER_0	    EQU 0X24
-STP_DLAY_CTER_1	    EQU 0X25
-LDR_SNSBLTY_0	    EQU 0x26
+W_TMP	    EQU 0x20
+STATUS_TMP  EQU	0x21
+AN0_VALUE   EQU 0x22
+AN1_VALUE   EQU 0x23
 
 ; program setup
 setup:
     
-    ; set LDR sensibility
-    MOVLW   0b11110000		; set the sensibility value to delete possible noise
-    MOVWF   LDR_SNSBLTY_0
-    
     ; ports configuration
     BANKSEL TRISA
-    MOVLW   0b00000011		; set AN0 & AN1 as inputs
+    MOVLW   0b00000011		; set AN0 and AN1 as inputs
     MOVWF   TRISA
     BANKSEL TRISB
     MOVLW   0b00000000		; set RB0, RB1, RB2 & RB3 as outputs
     MOVWF   TRISB
     BANKSEL ANSEL
-    MOVLW   0b00000011		; enable analog inputs on AN0 & AN1
+    MOVLW   0b00000011		; enable analog inputs on AN0 and AN1
     MOVWF   ANSEL
 
     ; ADC configuration
     BANKSEL VRCON		; set the reference voltage
     MOVLW   0b00000000		; VREN - VROE - VRR - VRSS - VR3 - VR2 - VR1 - VR0
     MOVWF   VRCON
-    BANKSEL ADCON0		; set the max clock, set the input channel AN0 and turn on the ADC
+    BANKSEL ADCON0		; set the clock, set the input channel AN0 and turn on the ADC
     MOVLW   0b10000001		; ADCS1 - ADCS0 - CHS3 - CHS2 - CHS1 - CHS0 - GO/DONE - ADON
     MOVWF   ADCON0
-    BANKSEL ADCON1		; set reference voltage source in VDD & VSS ans justify the result to the left
+    BANKSEL ADCON1		; select the reference voltage source (VDD and VSS)
     MOVLW   0b00000000		; ADFM - xx - VCFG1 - VCFG0 - xx - xx - xx - xx
     MOVWF   ADCON1
 
@@ -87,7 +80,7 @@ main:
     BSF     ADCON0, 1		; start conversion (GO/DONE)
     BTFSC   ADCON0, 1		; wait until the conversion is complete
     GOTO    $-1
-    MOVF    ADRESH, W		; read the conversion result in ADRESH
+    MOVF    ADRESL, 0		; read the conversion result in ADRESL
     MOVWF   AN0_VALUE		; store the result in the variable AN0_VALUE
 
     ; switch to channel AN1 and measure voltage on pin AN1
@@ -96,125 +89,41 @@ main:
     BSF     ADCON0, 1		; start conversion (GO/DONE)
     BTFSC   ADCON0, 1		; wait until the conversion is complete (GO/DONE)
     GOTO    $-1
-    MOVF    ADRESH, W		; read the conversion result in ADRESH
+    MOVF    ADRESL, 0		; read the conversion result in ADRESL
     MOVWF   AN1_VALUE		; store the result in the variable AN1_VALUE
 
-    ; apply sensibility value to the measured voltages to delete possible noise
-    MOVF    AN0_VALUE, W
-    ANDLW   LDR_SNSBLTY_0
-    MOVWF   AN0_VALUE
-    MOVF    AN1_VALUE, W
-    ANDLW   LDR_SNSBLTY_0
-    MOVWF   AN1_VALUE
-    
-    ; compare the measured voltages and rotate to left or right if necessary
-    MOVF    AN0_VALUE, W
-    SUBWF   AN1_VALUE, W	; subtract AN1_VALUE from AN0_VALUE
-    BTFSC   STATUS, 2		; if the result is zero, do nothing and skip
+    ; compare the measured voltages and turn on the corresponding LEDs
+    MOVF    AN0_VALUE, 0
+    SUBWF   AN1_VALUE, 0	; subtract AN1_VALUE from AN0_VALUE
+    BTFSC   STATUS, 2		; if the result is zero, all LEDs turn off
+    GOTO    turnOffLEDs
+    BTFSC   STATUS, 2
     GOTO    $+5
-    BTFSS   STATUS, 0		; if the result is positive, rotate to the left
-    CALL    rotateLeft
-    BTFSC   STATUS, 0		; if the result is negative, rotate to the right
-    CALL    rotateRight
+    BTFSS   STATUS, 0		; if the result is positive, turn on the LED in RB0
+    CALL    turnOnLEDRB0
+    BTFSC   STATUS, 0		; if the result is negative, turn on the LED in RB1
+    CALL    turnOnLEDRB1
     
     GOTO    main
+
+; subroutine to turn off all LEDs
+turnOffLEDs:
+    MOVLW   0b00000000
+    MOVWF   PORTB
     
-; subroutine to rotate to the left
-rotateLeft:
-    MOVLW   0b00001000
-    MOVWF   PORTB
-    CALL    stpDelay
-    MOVLW   0b00000100
-    MOVWF   PORTB
-    CALL    stpDelay
-    MOVLW   0b00000010
-    MOVWF   PORTB
-    CALL    stpDelay
+    RETURN
+
+; subroutine to light the LED in RB0
+turnOnLEDRB0:
     MOVLW   0b00000001
     MOVWF   PORTB
-    CALL    stpDelay
-    
-    ; turn off PORTB
-    MOVLW   0b00000000
-    MOVWF   PORTB
     
     RETURN
-    
-; subroutine to rotate to the right
-rotateRight:
-    MOVLW   0b00001000
-    MOVWF   PORTB
-    CALL    stpDelay
-    MOVLW   0b00000001
-    MOVWF   PORTB
-    CALL    stpDelay
+
+; subroutine to light the LED in RB1
+turnOnLEDRB1:
     MOVLW   0b00000010
     MOVWF   PORTB
-    CALL    stpDelay
-    MOVLW   0b00000100
-    MOVWF   PORTB
-    CALL    stpDelay
-    
-    ; turn off PORTB
-    MOVLW   0b00000000
-    MOVWF   PORTB
-    
-    RETURN
-    
-; subroutine to rotate up
-rotateUp:
-    MOVLW   0b10000000
-    MOVWF   PORTB
-    CALL    stpDelay
-    MOVLW   0b01000000
-    MOVWF   PORTB
-    CALL    stpDelay
-    MOVLW   0b00100000
-    MOVWF   PORTB
-    CALL    stpDelay
-    MOVLW   0b00010000
-    MOVWF   PORTB
-    CALL    stpDelay
-    
-    ; turn off PORTB
-    MOVLW   0b00000000
-    MOVWF   PORTB
-    
-    RETURN
-    
-; subroutine to rotate down
-rotateDown:
-    MOVLW   0b10000000
-    MOVWF   PORTB
-    CALL    stpDelay
-    MOVLW   0b00010000
-    MOVWF   PORTB
-    CALL    stpDelay
-    MOVLW   0b00100000
-    MOVWF   PORTB
-    CALL    stpDelay
-    MOVLW   0b01000000
-    MOVWF   PORTB
-    CALL    stpDelay
-    
-    ; turn off PORTB
-    MOVLW   0b00000000
-    MOVWF   PORTB
-    
-    RETURN
-    
-; steps delay subroutine (using instructions)
-stpDelay:
-    MOVLW   0x2F		; initial value of mayor loop
-    MOVWF   STP_DLAY_CTER_0
-stpLoop_1:
-    MOVLW   0xFF		; initial value of minor loop
-    MOVWF   STP_DLAY_CTER_1
-stpLoop_0:
-    DECFSZ  STP_DLAY_CTER_1
-    GOTO    stpLoop_0
-    DECFSZ  STP_DLAY_CTER_0
-    GOTO    stpLoop_1
     
     RETURN
 

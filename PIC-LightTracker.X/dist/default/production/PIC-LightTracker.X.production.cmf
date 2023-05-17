@@ -1,0 +1,265 @@
+%CMF
+# %PSECTS Section
+# For each object file, details of its psects are enumerated here.
+# The begining of the section is indicated by %PSECTS.  The first
+# line indicates the name of the first object file, e.g.
+#    $foo.obj
+# Each line that follows describes a psect in that object file, until
+# the next object file.  The lines that describe a psect have the
+# format:
+#    <psect name> <class name> <space> <link address> <load addresses> <length> <delta> <reloc>
+# All addresses and the length are given in unqualified hexadecimal
+# in delta units.  Any other numeric values are decimal.
+%PSECTS
+$build/default/production/Main.o
+RESET_VECT CODE 0 780 780 1 2 1
+INT_VECT CODE 0 781 781 7F 2 1
+config CONFIG 4 2007 2007 2 2 1
+# %UNUSED Section
+# This section enumerates the unused ranges of each CLASS. Each entry
+# is described on a single line as follows:
+#    <class name> <range> <delta>
+# Addresses given in the range are in hexadecimal and units of delta.
+%UNUSED
+RAM 20-6F 1
+RAM A0-EF 1
+RAM 110-16F 1
+RAM 190-1EF 1
+BANK0 20-6F 1
+BANK1 A0-EF 1
+BANK2 110-16F 1
+BANK3 190-1EF 1
+CONST 0-77F 2
+CONST 800-1FFF 2
+ENTRY 0-77F 2
+ENTRY 800-1FFF 2
+IDLOC 2000-2003 2
+CODE 0-77F 2
+CODE 800-1FFF 2
+SFR0 0-1F 1
+SFR1 80-9F 1
+SFR2 100-10F 1
+SFR3 180-18F 1
+COMMON 70-7F 1
+EEDATA 2100-21FF 2
+STRCODE 0-77F 2
+STRCODE 800-1FFF 2
+STRING 0-77F 2
+STRING 800-1FFF 2
+# %LINETAB Section
+# This section enumerates the file/line to address mappings.
+# The beginning of the section is indicated by %LINETAB.
+# The first line indicates the name of the first object file, e.g.
+#   $foo.obj
+# Each line that follows describes a single mapping until the next
+# object file.  Mappings have the following format:
+#    <address> <psect name> <class name> ><line number>:<file name>
+# The address is absolute and given given in unqualified hex 
+# in delta units of the psect. All mappings within an object file
+# are in ascending order of addresses.
+# All other numeric values are in decimal.
+%LINETAB
+$build/default/production/Main.o
+781 INT_VECT CODE >31:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+782 INT_VECT CODE >44:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+783 INT_VECT CODE >45:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+784 INT_VECT CODE >48:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+786 INT_VECT CODE >49:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+787 INT_VECT CODE >50:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+788 INT_VECT CODE >51:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+78A INT_VECT CODE >52:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+78B INT_VECT CODE >53:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+78C INT_VECT CODE >54:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+78E INT_VECT CODE >55:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+78F INT_VECT CODE >56:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+790 INT_VECT CODE >59:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+792 INT_VECT CODE >60:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+793 INT_VECT CODE >61:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+794 INT_VECT CODE >62:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+796 INT_VECT CODE >63:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+797 INT_VECT CODE >64:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+798 INT_VECT CODE >65:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+79A INT_VECT CODE >66:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+79B INT_VECT CODE >67:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+79C INT_VECT CODE >73:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+79E INT_VECT CODE >74:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+79F INT_VECT CODE >75:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7A0 INT_VECT CODE >76:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7A1 INT_VECT CODE >77:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7A2 INT_VECT CODE >78:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7A3 INT_VECT CODE >79:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7A4 INT_VECT CODE >82:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7A6 INT_VECT CODE >83:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7A7 INT_VECT CODE >84:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7A8 INT_VECT CODE >85:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7A9 INT_VECT CODE >86:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7AA INT_VECT CODE >87:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7AB INT_VECT CODE >88:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7AC INT_VECT CODE >91:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7AD INT_VECT CODE >92:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7AE INT_VECT CODE >93:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7AF INT_VECT CODE >94:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7B0 INT_VECT CODE >95:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7B1 INT_VECT CODE >96:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7B2 INT_VECT CODE >99:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7B3 INT_VECT CODE >100:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7B4 INT_VECT CODE >101:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7B5 INT_VECT CODE >102:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7B6 INT_VECT CODE >103:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7B7 INT_VECT CODE >104:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7B8 INT_VECT CODE >105:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7B9 INT_VECT CODE >106:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7BA INT_VECT CODE >109:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7BB INT_VECT CODE >113:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7BC INT_VECT CODE >114:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7BD INT_VECT CODE >115:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7BE INT_VECT CODE >116:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7BF INT_VECT CODE >117:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7C0 INT_VECT CODE >118:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7C1 INT_VECT CODE >119:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7C2 INT_VECT CODE >120:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7C3 INT_VECT CODE >121:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7C4 INT_VECT CODE >122:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7C5 INT_VECT CODE >123:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7C6 INT_VECT CODE >124:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7C7 INT_VECT CODE >127:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7C8 INT_VECT CODE >128:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7C9 INT_VECT CODE >131:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7CA INT_VECT CODE >135:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7CB INT_VECT CODE >136:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7CC INT_VECT CODE >137:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7CD INT_VECT CODE >138:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7CE INT_VECT CODE >139:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7CF INT_VECT CODE >140:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7D0 INT_VECT CODE >141:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7D1 INT_VECT CODE >142:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7D2 INT_VECT CODE >143:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7D3 INT_VECT CODE >144:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7D4 INT_VECT CODE >145:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7D5 INT_VECT CODE >146:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7D6 INT_VECT CODE >149:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7D7 INT_VECT CODE >150:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7D8 INT_VECT CODE >153:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7D9 INT_VECT CODE >157:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7DA INT_VECT CODE >158:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7DB INT_VECT CODE >159:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7DC INT_VECT CODE >160:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7DD INT_VECT CODE >161:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7DE INT_VECT CODE >162:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7DF INT_VECT CODE >163:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7E0 INT_VECT CODE >164:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7E1 INT_VECT CODE >165:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7E2 INT_VECT CODE >166:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7E3 INT_VECT CODE >167:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7E4 INT_VECT CODE >168:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7E5 INT_VECT CODE >171:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7E6 INT_VECT CODE >172:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7E7 INT_VECT CODE >175:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7E8 INT_VECT CODE >179:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7E9 INT_VECT CODE >180:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7EA INT_VECT CODE >181:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7EB INT_VECT CODE >182:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7EC INT_VECT CODE >183:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7ED INT_VECT CODE >184:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7EE INT_VECT CODE >185:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7EF INT_VECT CODE >186:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7F0 INT_VECT CODE >187:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7F1 INT_VECT CODE >188:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7F2 INT_VECT CODE >189:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7F3 INT_VECT CODE >190:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7F4 INT_VECT CODE >193:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7F5 INT_VECT CODE >194:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7F6 INT_VECT CODE >197:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7F7 INT_VECT CODE >201:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7F8 INT_VECT CODE >202:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7F9 INT_VECT CODE >204:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7FA INT_VECT CODE >205:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7FB INT_VECT CODE >207:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7FC INT_VECT CODE >208:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7FD INT_VECT CODE >209:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7FE INT_VECT CODE >210:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+7FF INT_VECT CODE >213:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+780 RESET_VECT CODE >22:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
+# %SYMTAB Section
+# An enumeration of all symbols in the program.
+# The beginning of the section is indicated by %SYMTAB.
+# Each line describes a single symbol as follows:
+#    <label> <value> [-]<load-adj> <class> <space> <psect> <file-name>
+# The value and load-adj are both in unqualified hexadecimal.
+# All other numeric values are in decimal.  The load-adj is the
+# quantity one needs to add to the symbol value in order to obtain the load
+# address of the symbol.  This value may be signed. If the symbol
+# was defined in a psect then <psect> will be "-". File-name
+# is the name of the object file in which the symbol was defined.
+%SYMTAB
+__Hspace_0 800 0 ABS 0 - -
+__Hspace_1 0 0 ABS 0 - -
+__Hspace_3 0 0 ABS 0 - -
+__Hspace_4 4010 0 ABS 0 - -
+__Hudata_bank0 0 0 ABS 0 udata_bank0 -
+__Hudata_bank1 0 0 ABS 0 udata_bank1 -
+__Hudata_bank2 0 0 ABS 0 udata_bank2 -
+__Hudata_bank3 0 0 ABS 0 udata_bank3 -
+__L__absolute__ 0 0 ABS 0 __absolute__ -
+__LINT_VECT 0 0 ABS 0 INT_VECT -
+__HINT_VECT 0 0 ABS 0 INT_VECT -
+__HRESET_VECT 0 0 ABS 0 RESET_VECT -
+__Hedata 0 0 ABS 0 edata -
+__Hudata 0 0 ABS 0 udata -
+__Hconfig 4012 0 CONFIG 4 config -
+__Ledata 0 0 ABS 0 edata -
+__Ludata 0 0 ABS 0 udata -
+__Hcode 0 0 ABS 0 code -
+__Hdata 0 0 ABS 0 data -
+__LRESET_VECT 0 0 ABS 0 RESET_VECT -
+__Lcode 0 0 ABS 0 code -
+__Ldata 0 0 ABS 0 data -
+__S0 800 0 ABS 0 - -
+__S1 0 0 ABS 0 - -
+__S3 0 0 ABS 0 - -
+__Lconfig 0 0 CONFIG 4 config -
+__Lspace_0 0 0 ABS 0 - -
+__Lspace_1 0 0 ABS 0 - -
+__Lspace_3 0 0 ABS 0 - -
+__Lspace_4 0 0 ABS 0 - -
+__Ludata_bank0 0 0 ABS 0 udata_bank0 -
+__Ludata_bank1 0 0 ABS 0 udata_bank1 -
+__Ludata_bank2 0 0 ABS 0 udata_bank2 -
+__Ludata_bank3 0 0 ABS 0 udata_bank3 -
+__H__absolute__ 0 0 ABS 0 __absolute__ -
+__Hudata_shr 0 0 ABS 0 udata_shr -
+__Ludata_shr 0 0 ABS 0 udata_shr -
+# %SPLITSTAB Section
+# This section enumerates all the psect splits performed by the assembler.
+# The beginning of the section is indicated by %SPLITSTAB.
+# Each line is a record a particular split, where the parent psect is on
+# the left and the child on the right.  Note that a child psect is always
+# split form the top of the parent psect. All splits from a given parent
+# are listed in the order in which they occurred.
+%SPLITSTAB
+# %DABS Section
+# This section contains a table of all usuage of the assember
+# directive DABS in the program. Each line has the following format:
+#   <name> <space> <address> <size>
+# If the DABS was originally labelled then that shall be <name>,
+# otherwise name will be "-".  The <space> number is in decimal.
+# <address> and <size> are in byte units as unqaulified hexadecimal
+%DABS
+# %SEGMENTS Section
+# This sections enumerates the segments of the program.  Each segment
+# is described on a single line as follows:
+#    <name> <space> <link address> <file address> <size> <delta>
+# Addresses and size are in unqualified hexadecimal.  The link address
+# and size are in units of delta. The file address is in units of bytes.
+# All other numeric quantities are in decimal.
+%SEGMENTS
+RESET_VECT 0 780 F00 1 2
+INT_VECT 0 781 F02 7F 2
+# %NOTES Section
+# This section contains data of all the note-psects.  The beginning of the section
+# is indicated by %NOTES. The first line indicates the name and decimal
+# byte-length of the first note-psect, e.g.
+#   $codecov_info_hdr 16
+# Each line that follows contains the byte-data of the psect in hexadecimal as a
+# space-separated list. These lines are limited to 16 bytes of data.
+%NOTES
