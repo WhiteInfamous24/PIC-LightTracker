@@ -37,7 +37,6 @@ INT_VECT:
     MOVWF   STATUS
     SWAPF   W_TMP, F
     SWAPF   W_TMP, W
-    
     RETFIE
 
 ; program variables
@@ -140,7 +139,6 @@ rotateLeft:
     ; turn off PORTB
     MOVLW   0b00000000
     MOVWF   PORTB
-    
     RETURN
     
 ; subroutine to rotate to the right
@@ -161,7 +159,6 @@ rotateRight:
     ; turn off PORTB
     MOVLW   0b00000000
     MOVWF   PORTB
-    
     RETURN
     
 ; subroutine to rotate up
@@ -182,7 +179,6 @@ rotateUp:
     ; turn off PORTB
     MOVLW   0b00000000
     MOVWF   PORTB
-    
     RETURN
     
 ; subroutine to rotate down
@@ -203,7 +199,6 @@ rotateDown:
     ; turn off PORTB
     MOVLW   0b00000000
     MOVWF   PORTB
-    
     RETURN
     
 ; steps delay subroutine (using instructions)
@@ -218,7 +213,6 @@ stpLoop_0:
     GOTO    stpLoop_0
     DECFSZ  STP_DLAY_CTER_0
     GOTO    stpLoop_1
-    
     RETURN
 
 END RESET_VECT
