@@ -2464,26 +2464,41 @@ ENDM
   CONFIG BOR4V = BOR40V ; Brown-out Reset Selection bit (Brown-out Reset set to 4.0V)
   CONFIG WRT = OFF ; Flash Program Memory Self Write Enable bits (Write protection off)
 
-; starting position of the program
+; starting position of the program < -pRESET_VECT=0h >
 psect RESET_VECT, class=CODE, delta=2
 RESET_VECT:
     GOTO setup
 
-; memory location to go when a interrupt happens
+; memory location to go when a interrupt happens < -pINT_VECT=4h >
 psect INT_VECT, class=CODE, delta=2
 INT_VECT:
 
+    ; save context
+    MOVWF W_TMP
+    SWAPF STATUS, W
+    MOVWF STATUS_TMP
+
     ; IMPLEMENT METHOD INTERRUPTION
 
-    ; return from interruption
+    ; return previous context
+    SWAPF STATUS_TMP, W
+    MOVWF STATUS
+    SWAPF W_TMP, F
+    SWAPF W_TMP, W
+
     RETFIE
 
 ; program variables
-AN0_VALUE EQU 0x20
-AN1_VALUE EQU 0x21
-STP_DLAY_CTER_0 EQU 0X22
-STP_DLAY_CTER_1 EQU 0X23
+W_TMP EQU 0x20
+STATUS_TMP EQU 0x21
+
+; LDRs
+AN0_VALUE EQU 0x22
+AN1_VALUE EQU 0x23
 LDR_SNSBLTY_0 EQU 0x24
+
+; TMR0 counter
+STP_DLAY_CTER EQU 0X25
 
 ; program setup
 setup:
@@ -2494,24 +2509,24 @@ setup:
 
     ; ports configuration
     BANKSEL TRISA
-    MOVLW 0b00000011 ; set AN0 & AN1 as inputs
+    MOVLW 0b00000011 ; set <AN0:AN1> as inputs
     MOVWF TRISA
     BANKSEL TRISB
-    MOVLW 0b00000000 ; set ((PORTB) and 07Fh), 0, ((PORTB) and 07Fh), 1, ((PORTB) and 07Fh), 2 & ((PORTB) and 07Fh), 3 as outputs
+    MOVLW 0b00000000 ; set <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 3> as outputs
     MOVWF TRISB
     BANKSEL ANSEL
-    MOVLW 0b00000011 ; enable analog inputs on AN0 & AN1
+    MOVLW 0b00000011 ; enable analog inputs on <AN0:AN1>
     MOVWF ANSEL
 
     ; ADC configuration
     BANKSEL VRCON ; set the reference voltage
-    MOVLW 0b00000000 ; ((VRCON) and 07Fh), 7 - ((VRCON) and 07Fh), 6 - ((VRCON) and 07Fh), 5 - ((VRCON) and 07Fh), 4 - ((VRCON) and 07Fh), 3 - ((VRCON) and 07Fh), 2 - ((VRCON) and 07Fh), 1 - ((VRCON) and 07Fh), 0
+    MOVLW 0b00000000 ; | ((VRCON) and 07Fh), 7 | ((VRCON) and 07Fh), 6 | ((VRCON) and 07Fh), 5 | ((VRCON) and 07Fh), 4 | ((VRCON) and 07Fh), 3 | ((VRCON) and 07Fh), 2 | ((VRCON) and 07Fh), 1 | ((VRCON) and 07Fh), 0 |
     MOVWF VRCON
     BANKSEL ADCON0 ; set the max clock, set the input channel AN0 and turn on the ADC
-    MOVLW 0b10000001 ; ((ADCON0) and 07Fh), 7 - ((ADCON0) and 07Fh), 6 - ((ADCON0) and 07Fh), 5 - ((ADCON0) and 07Fh), 4 - ((ADCON0) and 07Fh), 3 - ((ADCON0) and 07Fh), 2 - ((ADCON0) and 07Fh), 1/DONE - ((ADCON0) and 07Fh), 0
+    MOVLW 0b10000001 ; | ((ADCON0) and 07Fh), 7 | ((ADCON0) and 07Fh), 6 | ((ADCON0) and 07Fh), 5 | ((ADCON0) and 07Fh), 4 | ((ADCON0) and 07Fh), 3 | ((ADCON0) and 07Fh), 2 | ((ADCON0) and 07Fh), 1/DONE | ((ADCON0) and 07Fh), 0 |
     MOVWF ADCON0
     BANKSEL ADCON1 ; set reference voltage source in VDD & VSS ans justify the result to the left
-    MOVLW 0b00000000 ; ((ADCON1) and 07Fh), 7 - xx - ((ADCON1) and 07Fh), 5 - ((ADCON1) and 07Fh), 4 - xx - xx - xx - xx
+    MOVLW 0b00000000 ; | ((ADCON1) and 07Fh), 7 | xx | ((ADCON1) and 07Fh), 5 | ((ADCON1) and 07Fh), 4 | xx | xx | xx | xx |
     MOVWF ADCON1
 
 ; main program loop
@@ -2553,7 +2568,6 @@ main:
     BTFSC STATUS, 0 ; if the result is negative, rotate to the right
     CALL rotateRight
 
-    ; return to main program loop
     GOTO main
 
 ; subroutine to rotate to the left
@@ -2575,7 +2589,6 @@ rotateLeft:
     MOVLW 0b00000000
     MOVWF PORTB
 
-    ; return from subroutine
     RETURN
 
 ; subroutine to rotate to the right
@@ -2597,7 +2610,6 @@ rotateRight:
     MOVLW 0b00000000
     MOVWF PORTB
 
-    ; return from subroutine
     RETURN
 
 ; subroutine to rotate up
@@ -2619,7 +2631,6 @@ rotateUp:
     MOVLW 0b00000000
     MOVWF PORTB
 
-    ; return from subroutine
     RETURN
 
 ; subroutine to rotate down
@@ -2641,7 +2652,6 @@ rotateDown:
     MOVLW 0b00000000
     MOVWF PORTB
 
-    ; return from subroutine
     RETURN
 
 ; steps delay subroutine (using instructions)
@@ -2657,7 +2667,6 @@ stpLoop_0:
     DECFSZ STP_DLAY_CTER_0
     GOTO stpLoop_1
 
-    ; return fron subroutine
     RETURN
 
 END RESET_VECT
