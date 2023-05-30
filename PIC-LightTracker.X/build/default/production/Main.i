@@ -2478,45 +2478,72 @@ INT_VECT:
     SWAPF STATUS, W
     MOVWF STATUS_TMP
 
-    ; IMPLEMENT METHOD INTERRUPTION
+    ; TMR0 interruption
+    BTFSC INTCON, 2 ; check ((INTCON) and 07Fh), 2 bit
+    CALL TMR0ISR
 
     ; return previous context
     SWAPF STATUS_TMP, W
     MOVWF STATUS
     SWAPF W_TMP, F
     SWAPF W_TMP, W
-
     RETFIE
 
 ; program variables
 W_TMP EQU 0x20
 STATUS_TMP EQU 0x21
+TMR0_CNTR EQU 0x22
 
 ; LDRs
-AN0_VALUE EQU 0x22
-AN1_VALUE EQU 0x23
-LDR_SNSBLTY_0 EQU 0x24
+AN0_VALUE EQU 0x23
+AN1_VALUE EQU 0x24
+AN2_VALUE EQU 0x25
+AN3_VALUE EQU 0x26
+SNSBLTY EQU 0x27
 
-; TMR0 counter
-STP_DLAY_CTER EQU 0X25
+; stepper motor
+STPR_MOTOR EQU 0x28
+TMR0_CNTR_REF EQU 0x29
 
 ; program setup
 setup:
 
-    ; set LDR sensibility
-    MOVLW 0b11110000 ; set the sensibility value to delete possible noise
-    MOVWF LDR_SNSBLTY_0
-
-    ; ports configuration
+    ; TRISA configuration
     BANKSEL TRISA
-    MOVLW 0b00000011 ; set <AN0:AN1> as inputs
+    MOVLW 0b00001111 ; set <((PORTA) and 07Fh), 0:((PORTA) and 07Fh), 3> as inputs
     MOVWF TRISA
-    BANKSEL TRISB
-    MOVLW 0b00000000 ; set <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 3> as outputs
-    MOVWF TRISB
     BANKSEL ANSEL
-    MOVLW 0b00000011 ; enable analog inputs on <AN0:AN1>
+    MOVLW 0b00001111 ; set <((ANSEL) and 07Fh), 0:((ANSEL) and 07Fh), 3> as analogs
     MOVWF ANSEL
+
+    ; TRISB configuration
+    BANKSEL TRISB
+    MOVLW 0b11111111 ; set <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7> as inputs
+    MOVWF TRISB
+    BANKSEL ANSELH
+    MOVLW 0b00000000 ; set <((ANSELH) and 07Fh), 0:((ANSELH) and 07Fh), 5> as digitals
+    MOVF ANSELH
+
+    ; PORTC configuration
+    BANKSEL TRISC
+    MOVLW 0b00000000 ; set <((PORTC) and 07Fh), 0:((PORTC) and 07Fh), 7> PORTC pins as outputs to control LEDs and stepper motors
+    MOVWF TRISC
+
+    ; general port configuration
+    BANKSEL OPTION_REG ; enable global pull-ups and set pre-scaler (111)
+    MOVLW 0b00000111 ; | /RBPU | ((OPTION_REG) and 07Fh), 6 | ((OPTION_REG) and 07Fh), 5 | ((OPTION_REG) and 07Fh), 4 | ((OPTION_REG) and 07Fh), 3 | ((OPTION_REG) and 07Fh), 2 | ((OPTION_REG) and 07Fh), 1 | ((OPTION_REG) and 07Fh), 0 |
+    MOVWF OPTION_REG
+    BANKSEL WPUB
+    MOVLW 0b11111111 ; enable pull-ups in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7> pins
+    MOVWF WPUB
+
+    ; interruption configuration
+    BANKSEL INTCON ; enable global interruptions and interruptions in TMR0
+    MOVLW 0b10100000 ; | ((INTCON) and 07Fh), 7 | ((INTCON) and 07Fh), 6 | ((INTCON) and 07Fh), 5 | ((INTCON) and 07Fh), 4 | ((INTCON) and 07Fh), 3 | ((INTCON) and 07Fh), 2 | ((INTCON) and 07Fh), 1 | ((INTCON) and 07Fh), 0 |
+    MOVWF INTCON
+    BANKSEL IOCB
+    MOVLW 0b00000000 ; disable interruptions in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7> pins
+    MOVWF IOCB
 
     ; ADC configuration
     BANKSEL VRCON ; set the reference voltage
@@ -2529,144 +2556,177 @@ setup:
     MOVLW 0b00000000 ; | ((ADCON1) and 07Fh), 7 | xx | ((ADCON1) and 07Fh), 5 | ((ADCON1) and 07Fh), 4 | xx | xx | xx | xx |
     MOVWF ADCON1
 
+    ; TMR0 initialization
+    BANKSEL TMR0
+    CLRF TMR0
+
+    ; PORTC initialization
+    BANKSEL PORTC
+    MOVLW 0b00000000
+    MOVWF PORTC
+
+    ; sensibility initialization
+    BANKSEL SNSBLTY
+    MOVLW 0b11111000
+    MOVWF SNSBLTY
+
 ; main program loop
 main:
 
     ; switch to channel AN0 and measure voltage on pin AN0
     BANKSEL ADCON0
     BCF ADCON0, 2 ; set the ADC to measure voltage on pin AN0
+    BCF ADCON0, 3
     BSF ADCON0, 1 ; start conversion (((ADCON0) and 07Fh), 1/DONE)
     BTFSC ADCON0, 1 ; wait until the conversion is complete
     GOTO $-1
     MOVF ADRESH, W ; read the conversion result in ADRESH
+    BANKSEL AN0_VALUE
     MOVWF AN0_VALUE ; store the result in the variable AN0_VALUE
 
     ; switch to channel AN1 and measure voltage on pin AN1
     BANKSEL ADCON0
     BSF ADCON0, 2 ; set the ADC to measure voltage on pin AN1
+    BCF ADCON0, 3
     BSF ADCON0, 1 ; start conversion (((ADCON0) and 07Fh), 1/DONE)
     BTFSC ADCON0, 1 ; wait until the conversion is complete (((ADCON0) and 07Fh), 1/DONE)
     GOTO $-1
     MOVF ADRESH, W ; read the conversion result in ADRESH
+    BANKSEL AN1_VALUE
     MOVWF AN1_VALUE ; store the result in the variable AN1_VALUE
 
-    ; apply sensibility value to the measured voltages to delete possible noise
-    MOVF AN0_VALUE, W
-    ANDLW LDR_SNSBLTY_0
-    MOVWF AN0_VALUE
-    MOVF AN1_VALUE, W
-    ANDLW LDR_SNSBLTY_0
-    MOVWF AN1_VALUE
+    ; switch to channel AN2 and measure voltage on pin AN2
+    BANKSEL ADCON0
+    BCF ADCON0, 2 ; set the ADC to measure voltage on pin AN2
+    BSF ADCON0, 3
+    BSF ADCON0, 1 ; start conversion (((ADCON0) and 07Fh), 1/DONE)
+    BTFSC ADCON0, 1 ; wait until the conversion is complete
+    GOTO $-1
+    MOVF ADRESH, W ; read the conversion result in ADRESH
+    BANKSEL AN2_VALUE
+    MOVWF AN2_VALUE ; store the result in the variable AN2_VALUE
 
-    ; compare the measured voltages and rotate to left or right if necessary
-    MOVF AN0_VALUE, W
-    SUBWF AN1_VALUE, W ; subtract AN1_VALUE from AN0_VALUE
-    BTFSC STATUS, 2 ; if the result is zero, do nothing and skip
-    GOTO $+5
-    BTFSS STATUS, 0 ; if the result is positive, rotate to the left
-    CALL rotateLeft
-    BTFSC STATUS, 0 ; if the result is negative, rotate to the right
-    CALL rotateRight
+    ; switch to channel AN3 and measure voltage on pin AN3
+    BANKSEL ADCON0
+    BSF ADCON0, 2 ; set the ADC to measure voltage on pin AN3
+    BSF ADCON0, 3
+    BSF ADCON0, 1 ; start conversion (((ADCON0) and 07Fh), 1/DONE)
+    BTFSC ADCON0, 1 ; wait until the conversion is complete
+    GOTO $-1
+    MOVF ADRESH, W ; read the conversion result in ADRESH
+    BANKSEL AN3_VALUE
+    MOVWF AN3_VALUE ; store the result in the variable AN3_VALUE
+
+    ; select memory bank 0 <00>
+    BCF STATUS, 5 ; clear ((STATUS) and 07Fh), 5 bit
+    BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
+
+    ; move the light tracker
+    CALL moveUpDown
+    CALL moveLeftRight
 
     GOTO main
 
-; subroutine to rotate to the left
-rotateLeft:
-    MOVLW 0b00001000
-    MOVWF PORTB
-    CALL stpDelay
-    MOVLW 0b00000100
-    MOVWF PORTB
-    CALL stpDelay
-    MOVLW 0b00000010
-    MOVWF PORTB
-    CALL stpDelay
-    MOVLW 0b00000001
-    MOVWF PORTB
-    CALL stpDelay
-
-    ; turn off PORTB
-    MOVLW 0b00000000
-    MOVWF PORTB
-
+; interruption subroutine to control TMR0
+TMR0ISR:
+    BANKSEL TMR0
+    CLRF TMR0 ; reset TMR0
+    INCF TMR0_CNTR, F ; increment TMR0 counter variable
+    BCF INTCON, 2 ; clear ((INTCON) and 07Fh), 2 bit
     RETURN
 
-; subroutine to rotate to the right
-rotateRight:
-    MOVLW 0b00001000
-    MOVWF PORTB
-    CALL stpDelay
-    MOVLW 0b00000001
-    MOVWF PORTB
-    CALL stpDelay
-    MOVLW 0b00000010
-    MOVWF PORTB
-    CALL stpDelay
-    MOVLW 0b00000100
-    MOVWF PORTB
-    CALL stpDelay
+; subroutine to control the up/down stepper motor
+moveUpDown:
 
-    ; turn off PORTB
-    MOVLW 0b00000000
-    MOVWF PORTB
+    ; compare the measured voltages and rotate up or down if necessary
+    MOVF AN0_VALUE, W
+    SUBWF AN1_VALUE, W ; subtract AN1_VALUE from AN0_VALUE
+    ANDWF SNSBLTY, W ; apply sensitivity value to smooth motion
+    BTFSC STATUS, 2 ; if the result is zero, do nothing
+    GOTO stopRotationUD
+    BTFSS STATUS, 0 ; if the result is positive, rotate up
+    GOTO rotateUp
+    BTFSC STATUS, 0 ; if the result is negative, rotate down
+    GOTO rotateDown
 
-    RETURN
+    ; rotate one step up
+    rotateUp:
+ BSF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in HIGH
+ BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
+ CALL getDelay
+ BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
+ CALL getDelay
+ RETURN
 
-; subroutine to rotate up
-rotateUp:
-    MOVLW 0b10000000
-    MOVWF PORTB
-    CALL stpDelay
-    MOVLW 0b01000000
-    MOVWF PORTB
-    CALL stpDelay
-    MOVLW 0b00100000
-    MOVWF PORTB
-    CALL stpDelay
-    MOVLW 0b00010000
-    MOVWF PORTB
-    CALL stpDelay
+    ; rotate one step down
+    rotateDown:
+ BCF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in LOW
+ BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
+ CALL getDelay
+ BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
+ CALL getDelay
+ RETURN
 
-    ; turn off PORTB
-    MOVLW 0b00000000
-    MOVWF PORTB
+    ; no rotation
+    stopRotationUD:
+ BCF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in LOW
+ BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
+ CALL getDelay
+ CALL getDelay ; make two delays to complete one cycle
+ RETURN
 
-    RETURN
+; subroutine to control the up/down stepper motor
+moveLeftRight:
 
-; subroutine to rotate down
-rotateDown:
-    MOVLW 0b10000000
-    MOVWF PORTB
-    CALL stpDelay
-    MOVLW 0b00010000
-    MOVWF PORTB
-    CALL stpDelay
-    MOVLW 0b00100000
-    MOVWF PORTB
-    CALL stpDelay
-    MOVLW 0b01000000
-    MOVWF PORTB
-    CALL stpDelay
+    ; compare the measured voltages and rotate left or right if necessary
+    MOVF AN2_VALUE, W
+    SUBWF AN3_VALUE, W ; subtract AN3_VALUE from AN2_VALUE
+    ANDWF SNSBLTY, W ; apply sensitivity value to smooth motion
+    BTFSC STATUS, 2 ; if the result is zero, do nothing
+    GOTO stopRotationLR
+    BTFSS STATUS, 0 ; if the result is positive, rotate left
+    GOTO rotateLeft
+    BTFSC STATUS, 0 ; if the result is negative, rotate right
+    GOTO rotateRight
 
-    ; turn off PORTB
-    MOVLW 0b00000000
-    MOVWF PORTB
+    ; rotate one step up
+    rotateLeft:
+ BSF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in HIGH
+ BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
+ CALL getDelay
+ BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
+ CALL getDelay
+ RETURN
 
-    RETURN
+    ; rotate one step down
+    rotateRight:
+ BCF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in LOW
+ BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
+ CALL getDelay
+ BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
+ CALL getDelay
+ RETURN
 
-; steps delay subroutine (using instructions)
-stpDelay:
-    MOVLW 0x2F ; initial value of mayor loop
-    MOVWF STP_DLAY_CTER_0
-stpLoop_1:
-    MOVLW 0xFF ; initial value of minor loop
-    MOVWF STP_DLAY_CTER_1
-stpLoop_0:
-    DECFSZ STP_DLAY_CTER_1
-    GOTO stpLoop_0
-    DECFSZ STP_DLAY_CTER_0
-    GOTO stpLoop_1
+    ; no rotation
+    stopRotationLR:
+ BCF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in LOW
+ BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
+ CALL getDelay
+ CALL getDelay ; make two delays to complete one cycle
+ RETURN
 
+; subroutine to make a delay
+getDelay:
+
+    ; set the reference value of TMR0
+    MOVF TMR0_CNTR, W
+    MOVWF TMR0_CNTR_REF
+
+    ; compare the actual TMR0 counter with the reference to make a pulse
+    MOVF TMR0_CNTR, W
+    SUBWF TMR0_CNTR_REF, W
+    BTFSC STATUS, 2
+    GOTO $-3
     RETURN
 
 END RESET_VECT
