@@ -2513,9 +2513,10 @@ SNSBLTY_RANGE EQU 0x45 ; sensibility range to prevent movement if it's stopped
 
 ; stepper motor
 STPR_MTR_F EQU 0x50 ; stepper motors flags
-    ; | xx | xx | xx | xx | LMD1 | LMD0 | WM1 | WM0 |
+    ; | xx | xx | STP1 | STP0 | LMD1 | LMD0 | WM1 | WM0 |
     ; WM = was moved: indicates if it was moved in the previous cycle
     ; LMD = last movement direction: indicates the last movement direction
+    ; STP = subscribe to pulse from TMR0 (-EXPERIMENTAL-)
 
 ; program setup
 setup:
