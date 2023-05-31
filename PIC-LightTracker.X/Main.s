@@ -52,15 +52,22 @@ W_TMP		EQU 0x20	; temporary W
 STATUS_TMP	EQU 0x21	; temporary STATUS
 
 ; timer 0
-TMR0_CNTR	EQU 0x25	; TMR0 counter
-TMR0_CNTR_REF	EQU 0x26	; TMR0 counter temporary reference
+TMR0_CNTR	EQU 0x30	; TMR0 counter
+TMR0_CNTR_REF	EQU 0x31	; TMR0 counter temporary reference
 
 ; ADC
-AN0_VALUE	EQU 0x30
-AN1_VALUE	EQU 0x31
-AN2_VALUE	EQU 0x32
-AN3_VALUE	EQU 0x33
-ADC_PORT_IT	EQU 0x34	; ADC port iterator
+AN0_VALUE	EQU 0x40
+AN1_VALUE	EQU 0x41
+AN2_VALUE	EQU 0x42
+AN3_VALUE	EQU 0x43
+ADC_PORT_IT	EQU 0x44	; ADC port iterator
+SNSBLTY_RANGE	EQU 0x45	; sensibility range to prevent movement if it's stopped
+
+; stepper motor
+STPR_MTR_F	EQU 0x50	; stepper motors flags
+				; | xx | xx | xx | xx | LMD1 | LMD0 | WM1 | WM0 |
+				; WM = was moved: indicates if it was moved in the previous cycle
+				; LMD = last movement direction: indicates the last movement direction
 
 ; program setup
 setup:
@@ -133,6 +140,8 @@ setup:
     ; variables initialization
     MOVLW   AN0_VALUE		; starting register to store <AN0:AN3> values
     MOVWF   ADC_PORT_IT
+    MOVLW   0b11110000		; sensibility range value
+    MOVWF   SNSBLTY_RANGE
 
 ; main program loop
 main:
@@ -175,7 +184,7 @@ ADCISR:
     
     ; reset ADC port iterator value
     resetADC_PORT_IT:
-	MOVLW   AN0_VALUE		; starting register to store <AN0:AN3> values
+	MOVLW   AN0_VALUE	; starting register to store <AN0:AN3> values
 	MOVWF   ADC_PORT_IT
 
     ; end ADCISR subroutine
@@ -199,9 +208,15 @@ ADCISR:
 ; subroutine to control the up/down movement of stepper motor
 moveUpDown:
     
-    ; compare the measured voltages and rotate up or down if necessary
+    ; compare the measured voltages
     MOVF    AN0_VALUE, W
     SUBWF   AN1_VALUE, W	; subtract AN1_VALUE from AN0_VALUE
+    
+    ; verify and apply sensibility if necessary
+    BTFSS   STPR_MTR_F, 0
+    ANDWF   SNSBLTY_RANGE, W
+    
+    ; rotate up or down if necessary
     BTFSC   STATUS, 2		; if the result is zero, do nothing
     GOTO    stopRotationUD
     BTFSS   STATUS, 0		; if the result is positive, rotate up
@@ -211,6 +226,12 @@ moveUpDown:
     
     ; rotate one step up
     rotateUp:
+    
+	; set flags
+	BSF	STPR_MTR_F, 0	; set as moved
+	BSF	STPR_MTR_F, 2	; set last moved direction
+	
+	; move the motor
 	BSF	PORTC, 0	; set direction (RC0) in HIGH
 	BSF	PORTC, 1	; set pulse (RC1) in HIGH
 	CALL	getDelay
@@ -220,6 +241,12 @@ moveUpDown:
     
     ; rotate one step down
     rotateDown:
+    
+	; set flags
+	BSF	STPR_MTR_F, 0	; set as moved
+	BCF	STPR_MTR_F, 2	; set last moved direction
+	
+	; move the motor
 	BCF	PORTC, 0	; set direction (RC0) in LOW
 	BSF	PORTC, 1	; set pulse (RC1) in HIGH
 	CALL	getDelay
@@ -229,6 +256,11 @@ moveUpDown:
     
     ; no rotation
     stopRotationUD:
+    
+	; set flag
+	BCF	STPR_MTR_F, 0	; set as not moved
+	
+	; stop the motor
 	BCF	PORTC, 0	; set direction (RC0) in LOW
 	BCF	PORTC, 1	; set pulse (RC1) in LOW
 	CALL	getDelay
@@ -238,9 +270,15 @@ moveUpDown:
 ; subroutine to control the left/right movement of stepper motor
 moveLeftRight:
     
-    ; compare the measured voltages and rotate left or right if necessary
+    ; compare the measured voltages
     MOVF    AN2_VALUE, W
     SUBWF   AN3_VALUE, W	; subtract AN3_VALUE from AN2_VALUE
+    
+    ; verify and apply sensibility if necessary
+    BTFSS   STPR_MTR_F, 1
+    ANDWF   SNSBLTY_RANGE, W
+    
+    ; rotate left or right if necessary
     BTFSC   STATUS, 2		; if the result is zero, do nothing
     GOTO    stopRotationLR
     BTFSS   STATUS, 0		; if the result is positive, rotate left
@@ -250,6 +288,12 @@ moveLeftRight:
     
     ; rotate one step up
     rotateLeft:
+    
+	; set flags
+	BSF	STPR_MTR_F, 1	; set as moved
+	BSF	STPR_MTR_F, 3	; set last moved direction
+	
+	; move the motor
 	BSF	PORTC, 2	; set direction (RC2) in HIGH
 	BSF	PORTC, 3	; set pulse (RC3) in HIGH
 	CALL	getDelay
@@ -259,6 +303,12 @@ moveLeftRight:
     
     ; rotate one step down
     rotateRight:
+    
+	; set flags
+	BSF	STPR_MTR_F, 1	; set as moved
+	BCF	STPR_MTR_F, 3	; set last moved direction
+	
+	; move the motor
 	BCF	PORTC, 2	; set direction (RC2) in LOW
 	BSF	PORTC, 3	; set pulse (RC3) in HIGH
 	CALL	getDelay
@@ -268,6 +318,11 @@ moveLeftRight:
     
     ; no rotation
     stopRotationLR:
+    
+	; set flag
+	BCF	STPR_MTR_F, 1	; set as not moved
+	
+	; stop the motor
 	BCF	PORTC, 2	; set direction (RC2) in LOW
 	BCF	PORTC, 3	; set pulse (RC3) in LOW
 	CALL	getDelay
