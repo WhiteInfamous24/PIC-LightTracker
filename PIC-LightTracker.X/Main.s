@@ -61,14 +61,7 @@ AN1_VALUE	EQU 0x41
 AN2_VALUE	EQU 0x42
 AN3_VALUE	EQU 0x43
 ADC_PORT_IT	EQU 0x44	; ADC port iterator
-SNSBLTY_RANGE	EQU 0x45	; sensibility range to prevent movement if it's stopped
-
-; stepper motor
-STPR_MTR_F	EQU 0x50	; stepper motors flags
-				; | xx | xx | STP1 | STP0 | LMD1 | LMD0 | WM1 | WM0 |
-				; WM = was moved: indicates if it was moved in the previous cycle
-				; LMD = last movement direction: indicates the last movement direction
-				; STP = subscribe to pulse from TMR0 (-EXPERIMENTAL-)
+SNSBLTY_RANGE	EQU 0x45	; sensibility range to prevent oscilations
 
 ; program setup
 setup:
@@ -95,8 +88,8 @@ setup:
     MOVWF   TRISC
     
     ; general port configuration
-    BANKSEL OPTION_REG		; enable global pull-ups and set pre-scaler (111) 
-    MOVLW   0b00000111		; | /RBPU | INTEDG | T0CS | T0SE | PSA | PS2 | PS1 | PS0 |
+    BANKSEL OPTION_REG		; enable global pull-ups and set pre-scaler (100) 
+    MOVLW   0b00000100		; | /RBPU | INTEDG | T0CS | T0SE | PSA | PS2 | PS1 | PS0 |
     MOVWF   OPTION_REG
     BANKSEL WPUB
     MOVLW   0b11111111		; enable pull-ups in <RB0:RB7>
@@ -213,8 +206,7 @@ moveUpDown:
     MOVF    AN0_VALUE, W
     SUBWF   AN1_VALUE, W	; subtract AN1_VALUE from AN0_VALUE
     
-    ; verify and apply sensibility if necessary
-    BTFSS   STPR_MTR_F, 0
+    ; apply sensibility value
     ANDWF   SNSBLTY_RANGE, W
     
     ; rotate up or down if necessary
@@ -227,12 +219,6 @@ moveUpDown:
     
     ; rotate one step up
     rotateUp:
-    
-	; set flags
-	BSF	STPR_MTR_F, 0	; set as moved
-	BSF	STPR_MTR_F, 2	; set last moved direction
-	
-	; move the motor
 	BSF	PORTC, 0	; set direction (RC0) in HIGH
 	BSF	PORTC, 1	; set pulse (RC1) in HIGH
 	CALL	getDelay
@@ -242,12 +228,6 @@ moveUpDown:
     
     ; rotate one step down
     rotateDown:
-    
-	; set flags
-	BSF	STPR_MTR_F, 0	; set as moved
-	BCF	STPR_MTR_F, 2	; set last moved direction
-	
-	; move the motor
 	BCF	PORTC, 0	; set direction (RC0) in LOW
 	BSF	PORTC, 1	; set pulse (RC1) in HIGH
 	CALL	getDelay
@@ -257,11 +237,6 @@ moveUpDown:
     
     ; no rotation
     stopRotationUD:
-    
-	; set flag
-	BCF	STPR_MTR_F, 0	; set as not moved
-	
-	; stop the motor
 	BCF	PORTC, 0	; set direction (RC0) in LOW
 	BCF	PORTC, 1	; set pulse (RC1) in LOW
 	CALL	getDelay
@@ -275,8 +250,7 @@ moveLeftRight:
     MOVF    AN2_VALUE, W
     SUBWF   AN3_VALUE, W	; subtract AN3_VALUE from AN2_VALUE
     
-    ; verify and apply sensibility if necessary
-    BTFSS   STPR_MTR_F, 1
+    ; apply sensibility value
     ANDWF   SNSBLTY_RANGE, W
     
     ; rotate left or right if necessary
@@ -289,12 +263,6 @@ moveLeftRight:
     
     ; rotate one step up
     rotateLeft:
-    
-	; set flags
-	BSF	STPR_MTR_F, 1	; set as moved
-	BSF	STPR_MTR_F, 3	; set last moved direction
-	
-	; move the motor
 	BSF	PORTC, 2	; set direction (RC2) in HIGH
 	BSF	PORTC, 3	; set pulse (RC3) in HIGH
 	CALL	getDelay
@@ -304,12 +272,6 @@ moveLeftRight:
     
     ; rotate one step down
     rotateRight:
-    
-	; set flags
-	BSF	STPR_MTR_F, 1	; set as moved
-	BCF	STPR_MTR_F, 3	; set last moved direction
-	
-	; move the motor
 	BCF	PORTC, 2	; set direction (RC2) in LOW
 	BSF	PORTC, 3	; set pulse (RC3) in HIGH
 	CALL	getDelay
@@ -319,11 +281,6 @@ moveLeftRight:
     
     ; no rotation
     stopRotationLR:
-    
-	; set flag
-	BCF	STPR_MTR_F, 1	; set as not moved
-	
-	; stop the motor
 	BCF	PORTC, 2	; set direction (RC2) in LOW
 	BCF	PORTC, 3	; set pulse (RC3) in LOW
 	CALL	getDelay
