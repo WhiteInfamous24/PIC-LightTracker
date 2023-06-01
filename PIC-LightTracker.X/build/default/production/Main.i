@@ -2488,6 +2488,10 @@ INT_VECT:
     BTFSC PIR1, 6 ; check ((PIR1) and 07Fh), 6 bit
     CALL ADCISR
 
+    ; keyboard/limit switchs interruption
+    BTFSC INTCON, 0 ; check ((INTCON) and 07Fh), 0 bit
+    CALL keyboardISR
+
     ; return previous context
     SWAPF STATUS_TMP, W
     MOVWF STATUS
@@ -2511,10 +2515,14 @@ AN3_VALUE EQU 0x43
 ADC_PORT_IT EQU 0x44 ; ADC port iterator
 SNSBLTY_RANGE EQU 0x45 ; sensibility range to prevent oscilations
 
+; keyboard
+KYBRD_BTN EQU 0x50
+KYBRD_FND_F EQU 0x21
+
 ; program setup
 setup:
 
-    ; TRISA configuration (LDRs)
+    ; PORTA configuration (LDRs)
     BANKSEL TRISA
     MOVLW 0b00001111 ; set <((PORTA) and 07Fh), 0:((PORTA) and 07Fh), 3> as inputs
     MOVWF TRISA
@@ -2522,7 +2530,7 @@ setup:
     MOVLW 0b00001111 ; set <((ANSEL) and 07Fh), 0:((ANSEL) and 07Fh), 3> as analogs
     MOVWF ANSEL
 
-    ; TRISB configuration (limit switchs)
+    ; PORTB configuration (keyboard rows/limit switchs)
     BANKSEL TRISB
     MOVLW 0b11111111 ; set <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7> as inputs
     MOVWF TRISB
@@ -2534,6 +2542,11 @@ setup:
     BANKSEL TRISC
     MOVLW 0b00000000 ; set <((PORTC) and 07Fh), 0:((PORTC) and 07Fh), 7> as outputs
     MOVWF TRISC
+
+    ; PORTD configuration (keyboard columns)
+    BANKSEL TRISD
+    MOVLW 0b00000000 ; set <((PORTD) and 07Fh), 4:((PORTD) and 07Fh), 7> as outputs
+    MOVWF TRISD
 
     ; general port configuration
     BANKSEL OPTION_REG ; enable global pull-ups and set pre-scaler (100)
@@ -2548,7 +2561,7 @@ setup:
     MOVLW 0b11111000 ; | ((INTCON) and 07Fh), 7 | ((INTCON) and 07Fh), 6 | ((INTCON) and 07Fh), 5 | ((INTCON) and 07Fh), 4 | ((INTCON) and 07Fh), 3 | ((INTCON) and 07Fh), 2 | ((INTCON) and 07Fh), 1 | ((INTCON) and 07Fh), 0 |
     MOVWF INTCON
     BANKSEL IOCB
-    MOVLW 0b00001111 ; enable interruptions in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 3>
+    MOVLW 0b11111111 ; enable interruptions in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
     MOVWF IOCB
     BANKSEL PIE1 ; enable interruptions in ADC
     MOVLW 0b01000000 ; | xx | ((PIE1) and 07Fh), 6 | ((PIE1) and 07Fh), 5 | ((PIE1) and 07Fh), 4 | ((PIE1) and 07Fh), 3 | ((PIE1) and 07Fh), 2 | ((PIE1) and 07Fh), 1 | ((PIE1) and 07Fh), 0 |
@@ -2578,6 +2591,11 @@ setup:
     BANKSEL PORTC
     MOVLW 0b00000000
     MOVWF PORTC
+
+    ; PORTD initialization
+    BANKSEL PORTD
+    MOVLW 0b00000000
+    MOVWF PORTD
 
     ; variables initialization
     MOVLW AN0_VALUE ; starting register to store <AN0:AN3> values
@@ -2645,6 +2663,161 @@ ADCISR:
  ; end the ADCISR
  BCF PIR1, 6 ; clear ((PIR1) and 07Fh), 6 bit
  BSF ADCON0, 1 ; start ADC conversion (((ADCON0) and 07Fh), 1/DONE)
+ RETURN
+
+; interruption subroutine to get pressed button in keyboard
+keyboardISR:
+
+    ; select memory bank 0 <00>
+    BCF STATUS, 5 ; clear ((STATUS) and 07Fh), 5 bit
+    BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
+
+    ; clear previous pressed button and found flag
+    CLRF KYBRD_BTN
+    CLRF KYBRD_FND_F
+
+    ; search in column 0
+    BCF PORTD, 4 ; active only column 0
+    BSF PORTD, 5
+    BSF PORTD, 6
+    BSF PORTD, 7
+    MOVLW 0b00000001 ; save current column
+    MOVWF KYBRD_BTN
+    CALL searchInRow ; find if the row is found with the current column
+    BTFSC KYBRD_FND_F, 0 ; if the keyboard found flag is set return
+    GOTO endKeyboardISR
+
+    ; search in column 1
+    BSF PORTD, 4
+    BCF PORTD, 5 ; active only column 1
+    BSF PORTD, 6
+    BSF PORTD, 7
+    MOVLW 0b00000010 ; save current column
+    MOVWF KYBRD_BTN
+    CALL searchInRow ; find if the row is found with the current column
+    BTFSC KYBRD_FND_F, 0 ; if the keyboard found flag is set return
+    GOTO endKeyboardISR
+
+    ; search in column 2
+    BSF PORTD, 4
+    BSF PORTD, 5
+    BCF PORTD, 6 ; active only column 2
+    BSF PORTD, 7
+    MOVLW 0b00000100 ; save current column
+    MOVWF KYBRD_BTN
+    CALL searchInRow ; find if the row is found with the current column
+    BTFSC KYBRD_FND_F, 0 ; if the keyboard found flag is set return
+    GOTO endKeyboardISR
+
+    ; search in column 3
+    BSF PORTD, 4
+    BSF PORTD, 5
+    BSF PORTD, 6
+    BCF PORTD, 7 ; active only column 3
+    MOVLW 0b00001000 ; save current column
+    MOVWF KYBRD_BTN
+    CALL searchInRow ; find if the row is found with the current column
+    BTFSC KYBRD_FND_F, 0 ; if the keyboard found flag is set, return
+    GOTO endKeyboardISR
+
+    ; case if there is no match
+    CLRF KYBRD_BTN
+
+    ; return from getKeyboard subroutine
+    endKeyboardISR:
+ CLRF PORTD
+ BCF INTCON, 1 ; clear ((INTCON) and 07Fh), 1 bit
+ BCF INTCON, 0 ; clear ((INTCON) and 07Fh), 0 bit
+ RETURN
+
+; subroutine to find if there are any set bits in the row
+searchInRow:
+    BTFSS PORTB, 0
+    GOTO setRow_0
+    BTFSS PORTB, 1
+    GOTO setRow_1
+    BTFSS PORTB, 2
+    GOTO setRow_2
+    BTFSS PORTB, 3
+    GOTO setRow_3
+    RETURN
+    setRow_0:
+ BSF KYBRD_BTN, 4
+ BSF KYBRD_FND_F, 0
+ RETURN
+    setRow_1:
+ BSF KYBRD_BTN, 5
+ BSF KYBRD_FND_F, 0
+ RETURN
+    setRow_2:
+ BSF KYBRD_BTN, 6
+ BSF KYBRD_FND_F, 0
+ RETURN
+    setRow_3:
+ BSF KYBRD_BTN, 7
+ BSF KYBRD_FND_F, 0
+ RETURN
+
+; subroutine to convert a value in W by performing additions based on bit positions
+kybrdToHexConv:
+
+    ; select memory bank 0 <00>
+    BCF STATUS, 5 ; clear ((STATUS) and 07Fh), 5 bit
+    BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
+
+    ; clear W
+    CLRW
+
+    ; add bit 7 (accumulator + 0)
+    BTFSS KYBRD_BTN, 7
+    GOTO addBit_6
+    ADDLW 0x00 ; value to add
+
+    ; add bit 6 (accumulator + 1)
+    addBit_6:
+ BTFSS KYBRD_BTN, 6
+ GOTO addBit_5
+ ADDLW 0x01 ; value to add
+
+    ; add bit 5 (accumulator + 2)
+    addBit_5:
+ BTFSS KYBRD_BTN, 5
+ GOTO addBit_4
+ ADDLW 0x02 ; value to add
+
+    ; add bit 4 (accumulator + 3)
+    addBit_4:
+ BTFSS KYBRD_BTN, 4
+ GOTO addBit_3
+ ADDLW 0x03 ; value to add
+
+    ; add bit 3 (accumulator + 0)
+    addBit_3:
+ BTFSS KYBRD_BTN, 3
+ GOTO addBit_2
+ ADDLW 0x00 ; value to add
+
+    ; add bit 2 (accumulator + 4)
+    addBit_2:
+ BTFSS KYBRD_BTN, 2
+ GOTO addBit_1
+ ADDLW 0x04 ; value to add
+
+    ; add bit 1 (accumulator + 8)
+    addBit_1:
+ BTFSS KYBRD_BTN, 1
+ GOTO addBit_0
+ ADDLW 0x08 ; value to add
+
+    ; add bit 0 (accumulator + 12)
+    addBit_0:
+ BTFSS KYBRD_BTN, 0
+ GOTO addNULL
+ ADDLW 0x0C ; value to add
+
+    ; add null
+    addNULL:
+ MOVWF KYBRD_BTN
  RETURN
 
 ; subroutine to control the up/down movement of stepper motor
