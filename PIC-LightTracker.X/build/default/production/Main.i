@@ -2478,6 +2478,11 @@ INT_VECT:
     SWAPF STATUS, W
     MOVWF STATUS_TMP
 
+    ; keyboard/limit switchs interruption
+    BANKSEL INTCON
+    BTFSC INTCON, 0 ; check ((INTCON) and 07Fh), 0 bit
+    CALL keyboardISR
+
     ; TMR0 interruption
     BANKSEL INTCON
     BTFSC INTCON, 2 ; check ((INTCON) and 07Fh), 2 bit
@@ -2487,10 +2492,6 @@ INT_VECT:
     BANKSEL PIR1
     BTFSC PIR1, 6 ; check ((PIR1) and 07Fh), 6 bit
     CALL ADCISR
-
-    ; keyboard/limit switchs interruption
-    BTFSC INTCON, 0 ; check ((INTCON) and 07Fh), 0 bit
-    CALL keyboardISR
 
     ; return previous context
     SWAPF STATUS_TMP, W
@@ -2517,7 +2518,7 @@ SNSBLTY_RANGE EQU 0x45 ; sensibility range to prevent oscilations
 
 ; keyboard
 KYBRD_BTN EQU 0x50
-KYBRD_FND_F EQU 0x21
+KYBRD_FND_F EQU 0x51
 
 ; program setup
 setup:
