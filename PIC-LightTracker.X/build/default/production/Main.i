@@ -2833,14 +2833,14 @@ moveUpDown:
 
     ; rotate up or down if necessary
     BTFSC STATUS, 2 ; if the result is zero, do nothing
-    GOTO stopRotationUD
+    GOTO stopRotUD
     BTFSS STATUS, 0 ; if the result is positive, rotate up
-    GOTO rotateUp
+    GOTO rotUp
     BTFSC STATUS, 0 ; if the result is negative, rotate down
-    GOTO rotateDown
+    GOTO rotDown
 
     ; rotate one step up
-    rotateUp:
+    rotUp:
  BSF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in HIGH
  BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
  CALL getDelay
@@ -2849,7 +2849,7 @@ moveUpDown:
  RETURN
 
     ; rotate one step down
-    rotateDown:
+    rotDown:
  BCF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in LOW
  BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
  CALL getDelay
@@ -2858,7 +2858,7 @@ moveUpDown:
  RETURN
 
     ; no rotation
-    stopRotationUD:
+    stopRotUD:
  BCF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in LOW
  BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
  CALL getDelay
@@ -2877,14 +2877,14 @@ moveLeftRight:
 
     ; rotate left or right if necessary
     BTFSC STATUS, 2 ; if the result is zero, do nothing
-    GOTO stopRotationLR
+    GOTO stopRotLR
     BTFSS STATUS, 0 ; if the result is positive, rotate left
-    GOTO rotateLeft
+    GOTO rotLeft
     BTFSC STATUS, 0 ; if the result is negative, rotate right
-    GOTO rotateRight
+    GOTO rotRight
 
     ; rotate one step up
-    rotateLeft:
+    rotLeft:
  BSF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in HIGH
  BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
  CALL getDelay
@@ -2893,7 +2893,7 @@ moveLeftRight:
  RETURN
 
     ; rotate one step down
-    rotateRight:
+    rotRight:
  BCF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in LOW
  BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
  CALL getDelay
@@ -2902,7 +2902,7 @@ moveLeftRight:
  RETURN
 
     ; no rotation
-    stopRotationLR:
+    stopRotLR:
  BCF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in LOW
  BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
  CALL getDelay
