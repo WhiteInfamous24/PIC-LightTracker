@@ -85,7 +85,7 @@ setup:
     
     ; PORTB configuration (keyboard rows/limit switchs)
     BANKSEL TRISB
-    MOVLW   0b00001111		; set <RB0:RB7> as inputs
+    MOVLW   0b11111111		; set <RB0:RB7> as inputs
     MOVWF   TRISB
     BANKSEL ANSELH
     MOVLW   0b00000000		; set <ANS8:ANS13> as digitals
@@ -106,7 +106,7 @@ setup:
     MOVLW   0b00000100		; | /RBPU | INTEDG | T0CS | T0SE | PSA | PS2 | PS1 | PS0 |
     MOVWF   OPTION_REG
     BANKSEL WPUB
-    MOVLW   0b00001111		; enable pull-ups in <RB0:RB7>
+    MOVLW   0b11111111		; enable pull-ups in <RB0:RB7>
     MOVWF   WPUB
 
     ; interruptions configuration
@@ -114,7 +114,7 @@ setup:
     MOVLW   0b11111000		; | GIE | PEIE | T0IE | INTE | RBIE | T0IF | INTF | RBIF |
     MOVWF   INTCON
     BANKSEL IOCB
-    MOVLW   0b00001111		; enable interruptions in <RB0:RB7>
+    MOVLW   0b11111111		; enable interruptions in <RB0:RB7>
     MOVWF   IOCB
     BANKSEL PIE1		; enable interruptions in ADC
     MOVLW   0b01000000		; | xx | ADIE | RCIE | TXIE | SSPIE | CCP1IE | TMR2IE | TMR1IE |
@@ -224,8 +224,6 @@ keyboardISR:
     ; select memory bank 0 <00>
     BCF	    STATUS, 5		; clear RP0 bit
     BCF	    STATUS, 6		; clear RP1 bit
-    
-    BSF	    PORTC, 7
     
     ; clear previous pressed button and found flag
     CLRF    KYBRD_BTN

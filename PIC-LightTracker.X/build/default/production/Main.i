@@ -2533,7 +2533,7 @@ setup:
 
     ; PORTB configuration (keyboard rows/limit switchs)
     BANKSEL TRISB
-    MOVLW 0b00001111 ; set <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7> as inputs
+    MOVLW 0b11111111 ; set <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7> as inputs
     MOVWF TRISB
     BANKSEL ANSELH
     MOVLW 0b00000000 ; set <((ANSELH) and 07Fh), 0:((ANSELH) and 07Fh), 5> as digitals
@@ -2554,7 +2554,7 @@ setup:
     MOVLW 0b00000100 ; | /RBPU | ((OPTION_REG) and 07Fh), 6 | ((OPTION_REG) and 07Fh), 5 | ((OPTION_REG) and 07Fh), 4 | ((OPTION_REG) and 07Fh), 3 | ((OPTION_REG) and 07Fh), 2 | ((OPTION_REG) and 07Fh), 1 | ((OPTION_REG) and 07Fh), 0 |
     MOVWF OPTION_REG
     BANKSEL WPUB
-    MOVLW 0b00001111 ; enable pull-ups in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
+    MOVLW 0b11111111 ; enable pull-ups in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
     MOVWF WPUB
 
     ; interruptions configuration
@@ -2562,7 +2562,7 @@ setup:
     MOVLW 0b11111000 ; | ((INTCON) and 07Fh), 7 | ((INTCON) and 07Fh), 6 | ((INTCON) and 07Fh), 5 | ((INTCON) and 07Fh), 4 | ((INTCON) and 07Fh), 3 | ((INTCON) and 07Fh), 2 | ((INTCON) and 07Fh), 1 | ((INTCON) and 07Fh), 0 |
     MOVWF INTCON
     BANKSEL IOCB
-    MOVLW 0b00001111 ; enable interruptions in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
+    MOVLW 0b11111111 ; enable interruptions in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
     MOVWF IOCB
     BANKSEL PIE1 ; enable interruptions in ADC
     MOVLW 0b01000000 ; | xx | ((PIE1) and 07Fh), 6 | ((PIE1) and 07Fh), 5 | ((PIE1) and 07Fh), 4 | ((PIE1) and 07Fh), 3 | ((PIE1) and 07Fh), 2 | ((PIE1) and 07Fh), 1 | ((PIE1) and 07Fh), 0 |
@@ -2672,8 +2672,6 @@ keyboardISR:
     ; select memory bank 0 <00>
     BCF STATUS, 5 ; clear ((STATUS) and 07Fh), 5 bit
     BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
-
-    BSF PORTC, 7
 
     ; clear previous pressed button and found flag
     CLRF KYBRD_BTN
