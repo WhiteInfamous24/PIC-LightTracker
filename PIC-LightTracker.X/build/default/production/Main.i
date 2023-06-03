@@ -2481,7 +2481,7 @@ INT_VECT:
     ; keyboard/limit switchs interruption
     BANKSEL INTCON
     BTFSC INTCON, 0 ; check ((INTCON) and 07Fh), 0 bit
-    CALL keyboardISR
+    CALL limitSwitchsISR
 
     ; TMR0 interruption
     BANKSEL INTCON
@@ -2517,8 +2517,11 @@ ADC_PORT_IT EQU 0x44 ; ADC port iterator
 SNSBLTY_RANGE EQU 0x45 ; sensibility range to prevent oscilations
 
 ; keyboard
-KYBRD_BTN EQU 0x50
-KYBRD_FND_F EQU 0x51
+KYBRD_BTN EQU 0x50 ; store the pressed button
+KYBRD_F EQU 0x51 ; keyboard flags
+
+; limit switchs
+LIMIT_SW_F EQU 0X60 ; limit switchs flags
 
 ; program setup
 setup:
@@ -2557,17 +2560,6 @@ setup:
     MOVLW 0b11111111 ; enable pull-ups in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
     MOVWF WPUB
 
-    ; interruptions configuration
-    BANKSEL INTCON ; enable global interruptions, interruptions in ((INTCON) and 07Fh), 6, interruptions in TMR0 and interruptions in PORTC
-    MOVLW 0b11111000 ; | ((INTCON) and 07Fh), 7 | ((INTCON) and 07Fh), 6 | ((INTCON) and 07Fh), 5 | ((INTCON) and 07Fh), 4 | ((INTCON) and 07Fh), 3 | ((INTCON) and 07Fh), 2 | ((INTCON) and 07Fh), 1 | ((INTCON) and 07Fh), 0 |
-    MOVWF INTCON
-    BANKSEL IOCB
-    MOVLW 0b11111111 ; enable interruptions in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
-    MOVWF IOCB
-    BANKSEL PIE1 ; enable interruptions in ADC
-    MOVLW 0b01000000 ; | xx | ((PIE1) and 07Fh), 6 | ((PIE1) and 07Fh), 5 | ((PIE1) and 07Fh), 4 | ((PIE1) and 07Fh), 3 | ((PIE1) and 07Fh), 2 | ((PIE1) and 07Fh), 1 | ((PIE1) and 07Fh), 0 |
-    MOVWF PIE1
-
     ; ADC configuration
     BANKSEL VRCON ; set the reference voltage
     MOVLW 0b00000000 ; | ((VRCON) and 07Fh), 7 | ((VRCON) and 07Fh), 6 | ((VRCON) and 07Fh), 5 | ((VRCON) and 07Fh), 4 | ((VRCON) and 07Fh), 3 | ((VRCON) and 07Fh), 2 | ((VRCON) and 07Fh), 1 | ((VRCON) and 07Fh), 0 |
@@ -2583,6 +2575,17 @@ setup:
     BANKSEL TMR0
     MOVLW 0b00000000
     MOVWF TMR0
+
+    ; interruptions configuration
+    BANKSEL IOCB
+    MOVLW 0b11111111 ; enable interruptions in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
+    MOVWF IOCB
+    BANKSEL PIE1 ; enable interruptions in ADC
+    MOVLW 0b01000000 ; | xx | ((PIE1) and 07Fh), 6 | ((PIE1) and 07Fh), 5 | ((PIE1) and 07Fh), 4 | ((PIE1) and 07Fh), 3 | ((PIE1) and 07Fh), 2 | ((PIE1) and 07Fh), 1 | ((PIE1) and 07Fh), 0 |
+    MOVWF PIE1
+    BANKSEL INTCON ; enable global interruptions, interruptions in ((INTCON) and 07Fh), 6, interruptions in TMR0 and interruptions in PORTC
+    MOVLW 0b11111000 ; | ((INTCON) and 07Fh), 7 | ((INTCON) and 07Fh), 6 | ((INTCON) and 07Fh), 5 | ((INTCON) and 07Fh), 4 | ((INTCON) and 07Fh), 3 | ((INTCON) and 07Fh), 2 | ((INTCON) and 07Fh), 1 | ((INTCON) and 07Fh), 0 |
+    MOVWF INTCON
 
     ; ADC initialization
     BANKSEL ADCON0
@@ -2603,6 +2606,9 @@ setup:
     MOVWF ADC_PORT_IT
     MOVLW 0b11111000 ; sensibility range value
     MOVWF SNSBLTY_RANGE
+    CLRF KYBRD_BTN
+    CLRF KYBRD_F
+    CLRF LIMIT_SW_F
 
 ; main program loop
 main:
@@ -2666,6 +2672,56 @@ ADCISR:
  BSF ADCON0, 1 ; start ADC conversion (((ADCON0) and 07Fh), 1/DONE)
  RETURN
 
+; interruption subroutine to manage limit switchs
+limitSwitchsISR:
+
+    ; up limit switch
+    BTFSS PORTB, 4
+    BSF LIMIT_SW_F, 4
+    BTFSC PORTB, 4
+    BCF LIMIT_SW_F, 4
+
+    ; down limit switch
+    BTFSS PORTB, 5
+    BSF LIMIT_SW_F, 5
+    BTFSC PORTB, 5
+    BCF LIMIT_SW_F, 5
+
+    ; left limit switch
+    BTFSS PORTB, 6
+    BSF LIMIT_SW_F, 6
+    BTFSC PORTB, 6
+    BCF LIMIT_SW_F, 6
+
+    ; right limit switch
+    BTFSS PORTB, 7
+    BSF LIMIT_SW_F, 7
+    BTFSC PORTB, 7
+    BCF LIMIT_SW_F, 7
+
+    ; turn on/off LEDs
+    BTFSC LIMIT_SW_F, 4
+    BSF PORTC, 4
+    BTFSS LIMIT_SW_F, 4
+    BCF PORTC, 4
+    BTFSC LIMIT_SW_F, 5
+    BSF PORTC, 5
+    BTFSS LIMIT_SW_F, 5
+    BCF PORTC, 5
+    BTFSC LIMIT_SW_F, 6
+    BSF PORTC, 6
+    BTFSS LIMIT_SW_F, 6
+    BCF PORTC, 6
+    BTFSC LIMIT_SW_F, 7
+    BSF PORTC, 7
+    BTFSS LIMIT_SW_F, 7
+    BCF PORTC, 7
+
+    ; return from limitSwitchsISR
+    BCF INTCON, 1 ; clear ((INTCON) and 07Fh), 1 bit
+    BCF INTCON, 0 ; clear ((INTCON) and 07Fh), 0 bit
+    RETURN
+
 ; interruption subroutine to get pressed button in keyboard
 keyboardISR:
 
@@ -2675,7 +2731,7 @@ keyboardISR:
 
     ; clear previous pressed button and found flag
     CLRF KYBRD_BTN
-    CLRF KYBRD_FND_F
+    CLRF KYBRD_F
 
     ; search in column 0
     BCF PORTD, 4 ; active only column 0
@@ -2685,7 +2741,7 @@ keyboardISR:
     MOVLW 0b00000001 ; save current column
     MOVWF KYBRD_BTN
     CALL searchInRow ; find if the row is found with the current column
-    BTFSC KYBRD_FND_F, 0 ; if the keyboard found flag is set return
+    BTFSC KYBRD_F, 0 ; if the keyboard found flag is set return
     GOTO endKeyboardISR
 
     ; search in column 1
@@ -2696,7 +2752,7 @@ keyboardISR:
     MOVLW 0b00000010 ; save current column
     MOVWF KYBRD_BTN
     CALL searchInRow ; find if the row is found with the current column
-    BTFSC KYBRD_FND_F, 0 ; if the keyboard found flag is set return
+    BTFSC KYBRD_F, 0 ; if the keyboard found flag is set return
     GOTO endKeyboardISR
 
     ; search in column 2
@@ -2707,7 +2763,7 @@ keyboardISR:
     MOVLW 0b00000100 ; save current column
     MOVWF KYBRD_BTN
     CALL searchInRow ; find if the row is found with the current column
-    BTFSC KYBRD_FND_F, 0 ; if the keyboard found flag is set return
+    BTFSC KYBRD_F, 0 ; if the keyboard found flag is set return
     GOTO endKeyboardISR
 
     ; search in column 3
@@ -2718,13 +2774,13 @@ keyboardISR:
     MOVLW 0b00001000 ; save current column
     MOVWF KYBRD_BTN
     CALL searchInRow ; find if the row is found with the current column
-    BTFSC KYBRD_FND_F, 0 ; if the keyboard found flag is set, return
+    BTFSC KYBRD_F, 0 ; if the keyboard found flag is set, return
     GOTO endKeyboardISR
 
     ; case if there is no match
     CLRF KYBRD_BTN
 
-    ; return from getKeyboard subroutine
+    ; return from keyboardISR
     endKeyboardISR:
  CLRF PORTD
  BCF INTCON, 1 ; clear ((INTCON) and 07Fh), 1 bit
@@ -2744,19 +2800,19 @@ searchInRow:
     RETURN
     setRow_0:
  BSF KYBRD_BTN, 4
- BSF KYBRD_FND_F, 0
+ BSF KYBRD_F, 0
  RETURN
     setRow_1:
  BSF KYBRD_BTN, 5
- BSF KYBRD_FND_F, 0
+ BSF KYBRD_F, 0
  RETURN
     setRow_2:
  BSF KYBRD_BTN, 6
- BSF KYBRD_FND_F, 0
+ BSF KYBRD_F, 0
  RETURN
     setRow_3:
  BSF KYBRD_BTN, 7
- BSF KYBRD_FND_F, 0
+ BSF KYBRD_F, 0
  RETURN
 
 ; subroutine to convert a value in W by performing additions based on bit positions
@@ -2842,6 +2898,7 @@ moveUpDown:
     ; rotate one step up
     rotUp:
  BSF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in HIGH
+ BTFSS LIMIT_SW_F, 6 ; if the limit switch is in HIGH, dont send pulse
  BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
  CALL getDelay
  BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
@@ -2851,6 +2908,7 @@ moveUpDown:
     ; rotate one step down
     rotDown:
  BCF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in LOW
+ BTFSS LIMIT_SW_F, 7 ; if the limit switch is in HIGH, dont send pulse
  BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
  CALL getDelay
  BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
@@ -2886,6 +2944,7 @@ moveLeftRight:
     ; rotate one step up
     rotLeft:
  BSF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in HIGH
+ BTFSS LIMIT_SW_F, 4 ; if the limit switch is in HIGH, dont send pulse
  BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
  CALL getDelay
  BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
@@ -2895,6 +2954,7 @@ moveLeftRight:
     ; rotate one step down
     rotRight:
  BCF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in LOW
+ BTFSS LIMIT_SW_F, 5 ; if the limit switch is in HIGH, dont send pulse
  BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
  CALL getDelay
  BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
