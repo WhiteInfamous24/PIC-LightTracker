@@ -91,18 +91,15 @@ setup:
     MOVLW   0b11111111		; set <RB0:RB7> as inputs
     MOVWF   TRISB
     BANKSEL ANSELH
-    MOVLW   0b00000000		; set <ANS8:ANS13> as digitals
-    MOVF    ANSELH
+    CLRF    ANSELH		; set <ANS8:ANS13> as digitals
     
     ; PORTC configuration (LEDs & stepper motors)
     BANKSEL TRISC
-    MOVLW   0b00000000		; set <RC0:RC7> as outputs
-    MOVWF   TRISC
+    CLRF    TRISC		; set <RC0:RC7> as outputs
     
     ; PORTD configuration (keyboard columns)
     BANKSEL TRISD
-    MOVLW   0b00000000		; set <RD4:RD7> as outputs 
-    MOVWF   TRISD
+    CLRF    TRISD		; set <RD4:RD7> as outputs
     
     ; general port configuration
     BANKSEL OPTION_REG		; enable global pull-ups and set pre-scaler (100=fast, 110=slow) 
@@ -111,6 +108,17 @@ setup:
     BANKSEL WPUB
     MOVLW   0b11111111		; enable pull-ups in <RB0:RB7>
     MOVWF   WPUB
+    
+    ; interruptions configuration
+    BANKSEL INTCON		; enable global interruptions, interruptions in PEIE, interruptions in TMR0 and interruptions in PORTC
+    MOVLW   0b11111000		; | GIE | PEIE | T0IE | INTE | RBIE | T0IF | INTF | RBIF |
+    MOVWF   INTCON
+    BANKSEL IOCB
+    MOVLW   0b11111111		; enable interruptions in <RB0:RB7>
+    MOVWF   IOCB
+    BANKSEL PIE1		; enable interruptions in ADC
+    MOVLW   0b01000000		; | xx | ADIE | RCIE | TXIE | SSPIE | CCP1IE | TMR2IE | TMR1IE |
+    MOVWF   PIE1
     
     ; ADC configuration
     BANKSEL VRCON		; set the reference voltage
@@ -125,19 +133,7 @@ setup:
     
     ; TMR0 initialization
     BANKSEL TMR0
-    MOVLW   0b00000000
-    MOVWF   TMR0
-    
-    ; interruptions configuration
-    BANKSEL IOCB
-    MOVLW   0b11111111		; enable interruptions in <RB0:RB7>
-    MOVWF   IOCB
-    BANKSEL PIE1		; enable interruptions in ADC
-    MOVLW   0b01000000		; | xx | ADIE | RCIE | TXIE | SSPIE | CCP1IE | TMR2IE | TMR1IE |
-    MOVWF   PIE1
-    BANKSEL INTCON		; enable global interruptions, interruptions in PEIE, interruptions in TMR0 and interruptions in PORTC
-    MOVLW   0b11111000		; | GIE | PEIE | T0IE | INTE | RBIE | T0IF | INTF | RBIF |
-    MOVWF   INTCON
+    CLRF    TMR0
     
     ; ADC initialization
     BANKSEL ADCON0
@@ -145,13 +141,11 @@ setup:
     
     ; PORTC initialization
     BANKSEL PORTC
-    MOVLW   0b00000000
-    MOVWF   PORTC
+    CLRF    PORTC
     
     ; PORTD initialization
     BANKSEL PORTD
-    MOVLW   0b00000000
-    MOVWF   PORTD
+    CLRF    PORTD
     
     ; variables initialization
     MOVLW   AN0_VALUE		; starting register to store <AN0:AN3> values
