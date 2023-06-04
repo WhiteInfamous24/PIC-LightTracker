@@ -2449,7 +2449,7 @@ ENDM
 
 
 ; CONFIG1
-  CONFIG FOSC = XT ; Oscillator Selection bits (XT oscillator: Crystal/resonator on ((PORTA) and 07Fh), 6/OSC2/CLKOUT and ((PORTA) and 07Fh), 7/OSC1/CLKIN)
+  CONFIG FOSC = INTRC_NOCLKOUT ; Oscillator Selection bits (INTOSCIO oscillator: I/O function on ((PORTA) and 07Fh), 6/OSC2/CLKOUT pin, I/O function on ((PORTA) and 07Fh), 7/OSC1/CLKIN)
   CONFIG WDTE = OFF ; Watchdog Timer Enable bit (WDT disabled and can be enabled by ((WDTCON) and 07Fh), 0 bit of the WDTCON register)
   CONFIG PWRTE = OFF ; Power-up Timer Enable bit (PWRT disabled)
   CONFIG MCLRE = ON ; ((PORTE) and 07Fh), 3/MCLR pin function select bit (((PORTE) and 07Fh), 3/MCLR pin function is MCLR)
@@ -2603,6 +2603,12 @@ setup:
     CLRF KYBRD_BTN
     CLRF KYBRD_F
     CLRF LIMIT_SW_F
+
+    ; axis recognition sequence
+    CALL moveUpToLimitSw
+    CALL moveDownToLimitSw
+    CALL moveLeftToLimitSw
+    CALL moveRightToLimitSw
 
 ; main program loop
 main:
@@ -2871,6 +2877,28 @@ kybrdToHexConv:
  MOVWF KYBRD_BTN
  RETURN
 
+; subroutine to move the stepper motor up to the limit switch
+moveUpToLimitSw:
+    CALL rotUp
+    BTFSS LIMIT_SW_F, 4
+    GOTO $-2
+    RETURN
+
+; subroutine to move the stepper motor down to the limit switch
+moveDownToLimitSw:
+    CALL rotDown
+    BTFSS LIMIT_SW_F, 5
+    GOTO $-2
+    RETURN
+
+; subroutine to move the stepper motor left to the limit switch
+moveLeftToLimitSw:
+    RETURN
+
+; subroutine to move the stepper motor right to the limit switch
+moveRightToLimitSw:
+    RETURN
+
 ; subroutine to control the up/down movement of stepper motor
 moveUpDown:
 
@@ -2884,15 +2912,15 @@ moveUpDown:
     ; rotate up or down if necessary
     BTFSC STATUS, 2 ; if the result is zero, do nothing
     GOTO stopRotUD
-    BTFSS STATUS, 0 ; if the result is positive, rotate up
+    BTFSC STATUS, 0 ; if the result is negative, rotate up
     GOTO rotUp
-    BTFSC STATUS, 0 ; if the result is negative, rotate down
+    BTFSS STATUS, 0 ; if the result is positive, rotate down
     GOTO rotDown
 
     ; rotate one step up
     rotUp:
- BSF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in HIGH
- BTFSS LIMIT_SW_F, 6 ; if the limit switch is in HIGH, dont send pulse
+ BCF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in LOW
+ BTFSS LIMIT_SW_F, 4 ; if the limit switch is in HIGH, dont send pulse
  BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
  CALL getDelay
  BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
@@ -2901,8 +2929,8 @@ moveUpDown:
 
     ; rotate one step down
     rotDown:
- BCF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in LOW
- BTFSS LIMIT_SW_F, 7 ; if the limit switch is in HIGH, dont send pulse
+ BSF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in HIGH
+ BTFSS LIMIT_SW_F, 5 ; if the limit switch is in HIGH, dont send pulse
  BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
  CALL getDelay
  BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
@@ -2930,15 +2958,15 @@ moveLeftRight:
     ; rotate left or right if necessary
     BTFSC STATUS, 2 ; if the result is zero, do nothing
     GOTO stopRotLR
-    BTFSS STATUS, 0 ; if the result is positive, rotate left
+    BTFSC STATUS, 0 ; if the result is negative, rotate left
     GOTO rotLeft
-    BTFSC STATUS, 0 ; if the result is negative, rotate right
+    BTFSS STATUS, 0 ; if the result is positive, rotate right
     GOTO rotRight
 
     ; rotate one step up
     rotLeft:
- BSF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in HIGH
- BTFSS LIMIT_SW_F, 4 ; if the limit switch is in HIGH, dont send pulse
+ BCF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in LOW
+ BTFSS LIMIT_SW_F, 6 ; if the limit switch is in HIGH, dont send pulse
  BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
  CALL getDelay
  BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
@@ -2947,8 +2975,8 @@ moveLeftRight:
 
     ; rotate one step down
     rotRight:
- BCF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in LOW
- BTFSS LIMIT_SW_F, 5 ; if the limit switch is in HIGH, dont send pulse
+ BSF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in HIGH
+ BTFSS LIMIT_SW_F, 7 ; if the limit switch is in HIGH, dont send pulse
  BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
  CALL getDelay
  BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
