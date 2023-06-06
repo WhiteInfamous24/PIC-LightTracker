@@ -2893,10 +2893,16 @@ moveDownToLimitSw:
 
 ; subroutine to move the stepper motor left to the limit switch
 moveLeftToLimitSw:
+    CALL rotLeft
+    BTFSS LIMIT_SW_F, 6
+    GOTO $-2
     RETURN
 
 ; subroutine to move the stepper motor right to the limit switch
 moveRightToLimitSw:
+    CALL rotRight
+    BTFSS LIMIT_SW_F, 7
+    GOTO $-2
     RETURN
 
 ; subroutine to control the up/down movement of stepper motor
