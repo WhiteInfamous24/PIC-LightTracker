@@ -2642,8 +2642,7 @@ main:
     BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
 
     ; move the light tracker
-    CALL moveUpDown
-    CALL moveLeftRight
+    CALL lightTrackerMode
 
     GOTO main
 
@@ -2665,80 +2664,76 @@ ADCISR:
     MOVF ADRESH, W
     MOVWF INDF
 
-    ; increment adc port iterator and reset to 0x30 if necessary
+    ; increment adc port iterator and reset to AN1_VALUE position if necessary
     INCF ADC_PORT_IT, F
     MOVF ADC_PORT_IT, W
     SUBLW ADC_PORT_IT
-    BTFSC STATUS, 2
-    GOTO resetADC_PORT_IT
-    GOTO endADCISR
+    BTFSC STATUS, 2 ; if the port equals ADC_PORT_IT, then reset the iterator
+    GOTO $+2
+    GOTO $+3
 
     ; reset ADC port iterator value
-    resetADC_PORT_IT:
- MOVLW AN0_VALUE ; starting register to store <AN0:AN3> values
- MOVWF ADC_PORT_IT
+    MOVLW AN0_VALUE ; starting register to store <AN0:AN3> values
+    MOVWF ADC_PORT_IT
 
-    ; end ADCISR subroutine
-    endADCISR:
+    ; set the next ADC port
+    BTFSC ADC_PORT_IT, 0
+    BSF ADCON0, 2
+    BTFSS ADC_PORT_IT, 0
+    BCF ADCON0, 2
+    BTFSC ADC_PORT_IT, 1
+    BSF ADCON0, 3
+    BTFSS ADC_PORT_IT, 1
+    BCF ADCON0, 3
 
- ; set the next ADC port
- BTFSC ADC_PORT_IT, 0
- BSF ADCON0, 2
- BTFSS ADC_PORT_IT, 0
- BCF ADCON0, 2
- BTFSC ADC_PORT_IT, 1
- BSF ADCON0, 3
- BTFSS ADC_PORT_IT, 1
- BCF ADCON0, 3
-
- ; end the ADCISR
- BCF PIR1, 6 ; clear ((PIR1) and 07Fh), 6 bit
- BSF ADCON0, 1 ; start ADC conversion (((ADCON0) and 07Fh), 1/DONE)
- RETURN
+    ; end the ADCISR
+    BCF PIR1, 6 ; clear ((PIR1) and 07Fh), 6 bit
+    BSF ADCON0, 1 ; start ADC conversion (((ADCON0) and 07Fh), 1/DONE)
+    RETURN
 
 ; interruption subroutine to manage limit switchs
 limitSwitchsISR:
 
     ; up limit switch
     BTFSS PORTB, 4
-    BSF LIMIT_SW_F, 4
+    BSF LIMIT_SW_F, 0
     BTFSC PORTB, 4
-    BCF LIMIT_SW_F, 4
+    BCF LIMIT_SW_F, 0
 
     ; down limit switch
     BTFSS PORTB, 5
-    BSF LIMIT_SW_F, 5
+    BSF LIMIT_SW_F, 1
     BTFSC PORTB, 5
-    BCF LIMIT_SW_F, 5
+    BCF LIMIT_SW_F, 1
 
     ; left limit switch
     BTFSS PORTB, 6
-    BSF LIMIT_SW_F, 6
+    BSF LIMIT_SW_F, 2
     BTFSC PORTB, 6
-    BCF LIMIT_SW_F, 6
+    BCF LIMIT_SW_F, 2
 
     ; right limit switch
     BTFSS PORTB, 7
-    BSF LIMIT_SW_F, 7
+    BSF LIMIT_SW_F, 3
     BTFSC PORTB, 7
-    BCF LIMIT_SW_F, 7
+    BCF LIMIT_SW_F, 3
 
     ; turn on/off LEDs
-    BTFSC LIMIT_SW_F, 4
+    BTFSC LIMIT_SW_F, 0
     BSF PORTC, 4
-    BTFSS LIMIT_SW_F, 4
+    BTFSS LIMIT_SW_F, 0
     BCF PORTC, 4
-    BTFSC LIMIT_SW_F, 5
+    BTFSC LIMIT_SW_F, 1
     BSF PORTC, 5
-    BTFSS LIMIT_SW_F, 5
+    BTFSS LIMIT_SW_F, 1
     BCF PORTC, 5
-    BTFSC LIMIT_SW_F, 6
+    BTFSC LIMIT_SW_F, 2
     BSF PORTC, 6
-    BTFSS LIMIT_SW_F, 6
+    BTFSS LIMIT_SW_F, 2
     BCF PORTC, 6
-    BTFSC LIMIT_SW_F, 7
+    BTFSC LIMIT_SW_F, 3
     BSF PORTC, 7
-    BTFSS LIMIT_SW_F, 7
+    BTFSS LIMIT_SW_F, 3
     BCF PORTC, 7
 
     ; return from limitSwitchsISR
@@ -2766,7 +2761,7 @@ keyboardISR:
     MOVWF KYBRD_BTN
     CALL searchInRow ; find if the row is found with the current column
     BTFSC KYBRD_F, 0 ; if the keyboard found flag is set return
-    GOTO endKeyboardISR
+    GOTO $+29
 
     ; search in column 1
     BSF PORTD, 4
@@ -2777,7 +2772,7 @@ keyboardISR:
     MOVWF KYBRD_BTN
     CALL searchInRow ; find if the row is found with the current column
     BTFSC KYBRD_F, 0 ; if the keyboard found flag is set return
-    GOTO endKeyboardISR
+    GOTO $+20
 
     ; search in column 2
     BSF PORTD, 4
@@ -2788,7 +2783,7 @@ keyboardISR:
     MOVWF KYBRD_BTN
     CALL searchInRow ; find if the row is found with the current column
     BTFSC KYBRD_F, 0 ; if the keyboard found flag is set return
-    GOTO endKeyboardISR
+    GOTO $+11
 
     ; search in column 3
     BSF PORTD, 4
@@ -2799,45 +2794,48 @@ keyboardISR:
     MOVWF KYBRD_BTN
     CALL searchInRow ; find if the row is found with the current column
     BTFSC KYBRD_F, 0 ; if the keyboard found flag is set, return
-    GOTO endKeyboardISR
+    GOTO $+2
 
     ; case if there is no match
     CLRF KYBRD_BTN
 
     ; return from keyboardISR
-    endKeyboardISR:
- CLRF PORTD
- BCF INTCON, 1 ; clear ((INTCON) and 07Fh), 1 bit
- BCF INTCON, 0 ; clear ((INTCON) and 07Fh), 0 bit
- RETURN
+    CLRF PORTD
+    BCF INTCON, 1 ; clear ((INTCON) and 07Fh), 1 bit
+    BCF INTCON, 0 ; clear ((INTCON) and 07Fh), 0 bit
+    RETURN
 
 ; subroutine to find if there are any set bits in the row
 searchInRow:
     BTFSS PORTB, 0
-    GOTO setRow_0
+    GOTO $+8
     BTFSS PORTB, 1
-    GOTO setRow_1
+    GOTO $+9
     BTFSS PORTB, 2
-    GOTO setRow_2
+    GOTO $+10
     BTFSS PORTB, 3
-    GOTO setRow_3
+    GOTO $+11
     RETURN
-    setRow_0:
- BSF KYBRD_BTN, 4
- BSF KYBRD_F, 0
- RETURN
-    setRow_1:
- BSF KYBRD_BTN, 5
- BSF KYBRD_F, 0
- RETURN
-    setRow_2:
- BSF KYBRD_BTN, 6
- BSF KYBRD_F, 0
- RETURN
-    setRow_3:
- BSF KYBRD_BTN, 7
- BSF KYBRD_F, 0
- RETURN
+
+    ; set the row 0
+    BSF KYBRD_BTN, 4
+    BSF KYBRD_F, 0
+    RETURN
+
+    ; set the row 1
+    BSF KYBRD_BTN, 5
+    BSF KYBRD_F, 0
+    RETURN
+
+    ; set the row 2
+    BSF KYBRD_BTN, 6
+    BSF KYBRD_F, 0
+    RETURN
+
+    ; set the row 3
+    BSF KYBRD_BTN, 7
+    BSF KYBRD_F, 0
+    RETURN
 
 ; subroutine to convert a value in W by performing additions based on bit positions
 kybrdToHexConv:
@@ -2851,60 +2849,52 @@ kybrdToHexConv:
 
     ; add bit 7 (accumulator + 0)
     BTFSS KYBRD_BTN, 7
-    GOTO addBit_6
+    GOTO $+2
     ADDLW 0x00 ; value to add
 
     ; add bit 6 (accumulator + 1)
-    addBit_6:
- BTFSS KYBRD_BTN, 6
- GOTO addBit_5
- ADDLW 0x01 ; value to add
+    BTFSS KYBRD_BTN, 6
+    GOTO $+2
+    ADDLW 0x01 ; value to add
 
     ; add bit 5 (accumulator + 2)
-    addBit_5:
- BTFSS KYBRD_BTN, 5
- GOTO addBit_4
- ADDLW 0x02 ; value to add
+    BTFSS KYBRD_BTN, 5
+    GOTO $+2
+    ADDLW 0x02 ; value to add
 
     ; add bit 4 (accumulator + 3)
-    addBit_4:
- BTFSS KYBRD_BTN, 4
- GOTO addBit_3
- ADDLW 0x03 ; value to add
+    BTFSS KYBRD_BTN, 4
+    GOTO $+2
+    ADDLW 0x03 ; value to add
 
     ; add bit 3 (accumulator + 0)
-    addBit_3:
- BTFSS KYBRD_BTN, 3
- GOTO addBit_2
- ADDLW 0x00 ; value to add
+    BTFSS KYBRD_BTN, 3
+    GOTO $+2
+    ADDLW 0x00 ; value to add
 
     ; add bit 2 (accumulator + 4)
-    addBit_2:
- BTFSS KYBRD_BTN, 2
- GOTO addBit_1
- ADDLW 0x04 ; value to add
+    BTFSS KYBRD_BTN, 2
+    GOTO $+2
+    ADDLW 0x04 ; value to add
 
     ; add bit 1 (accumulator + 8)
-    addBit_1:
- BTFSS KYBRD_BTN, 1
- GOTO addBit_0
- ADDLW 0x08 ; value to add
+    BTFSS KYBRD_BTN, 1
+    GOTO $+2
+    ADDLW 0x08 ; value to add
 
     ; add bit 0 (accumulator + 12)
-    addBit_0:
- BTFSS KYBRD_BTN, 0
- GOTO addNULL
- ADDLW 0x0C ; value to add
+    BTFSS KYBRD_BTN, 0
+    GOTO $+2
+    ADDLW 0x0C ; value to add
 
     ; add null
-    addNULL:
- MOVWF KYBRD_BTN
- RETURN
+    MOVWF KYBRD_BTN
+    RETURN
 
 ; subroutine to move the stepper motor up to the limit switch
 moveUpToLimitSw:
     CALL rotUp
-    BTFSS LIMIT_SW_F, 4
+    BTFSS LIMIT_SW_F, 0
     GOTO $-2
 
     ; set the zero position of the stepper motor
@@ -2915,14 +2905,14 @@ moveUpToLimitSw:
 ; subroutine to move the stepper motor down to the limit switch
 moveDownToLimitSw:
     CALL rotDown
-    BTFSS LIMIT_SW_F, 5
+    BTFSS LIMIT_SW_F, 1
     GOTO $-2
     RETURN
 
 ; subroutine to move the stepper motor left to the limit switch
 moveLeftToLimitSw:
     CALL rotLeft
-    BTFSS LIMIT_SW_F, 6
+    BTFSS LIMIT_SW_F, 2
     GOTO $-2
 
     ; set the zero position of the stepper motor
@@ -2933,131 +2923,139 @@ moveLeftToLimitSw:
 ; subroutine to move the stepper motor right to the limit switch
 moveRightToLimitSw:
     CALL rotRight
-    BTFSS LIMIT_SW_F, 7
+    BTFSS LIMIT_SW_F, 3
     GOTO $-2
     RETURN
 
-; subroutine to control the up/down movement of stepper motor
-moveUpDown:
+; subroutine to move the light tracker using light
+lightTrackerMode:
 
     ; compare the measured voltages
     MOVF AN0_VALUE, W
     SUBWF AN1_VALUE, W ; subtract AN1_VALUE from AN0_VALUE
-
-    ; apply sensibility value
-    ANDWF SNSBLTY_RANGE, W
+    ANDWF SNSBLTY_RANGE, W ; apply sensibility value
 
     ; rotate up or down if necessary
     BTFSC STATUS, 2 ; if the result is zero, do nothing
-    GOTO stopRotUD
+    GOTO $+9
     BTFSC STATUS, 0 ; if the result is negative, rotate up
-    GOTO rotUp
+    GOTO $+3
     BTFSS STATUS, 0 ; if the result is positive, rotate down
-    GOTO rotDown
+    GOTO $+3
 
-    ; rotate one step up
-    rotUp:
- BCF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in LOW
- BTFSS LIMIT_SW_F, 4 ; if the limit switch is in HIGH, dont send pulse
- BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
- CALL getDelay
- BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
- CALL getDelay
-
- ; increment stepper motor position
- BTFSC LIMIT_SW_F, 4 ; if the limit switch is in HIGH, don't increment position
- GOTO $+4
- INCF MOTOR_POS_0L, F
- BTFSC STATUS, 0 ; if there is carry, increment MOTOR_POS_0H
- INCF MOTOR_POS_0H, F
- RETURN
-
-    ; rotate one step down
-    rotDown:
- BSF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in HIGH
- BTFSS LIMIT_SW_F, 5 ; if the limit switch is in HIGH, dont send pulse
- BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
- CALL getDelay
- BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
- CALL getDelay
-
- ; decrement stepper motor position
- BTFSC LIMIT_SW_F, 5 ; if the limit switch is in HIGH, don't increment position
- GOTO $+5
- MOVF MOTOR_POS_0L
- BTFSC STATUS, 2 ; if it is zero, decrement MOTOR_POS_0H
- DECF MOTOR_POS_0H, F
- DECF MOTOR_POS_0L, F
- RETURN
-
-    ; no rotation
-    stopRotUD:
- BCF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in LOW
- BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
- CALL getDelay
- CALL getDelay ; make two delays to complete one cycle
- RETURN
-
-; subroutine to control the left/right movement of stepper motor
-moveLeftRight:
+    ; rotation options
+    CALL rotUp
+    GOTO $+4
+    CALL rotDown
+    GOTO $+2
+    CALL stopRotUD
 
     ; compare the measured voltages
     MOVF AN2_VALUE, W
     SUBWF AN3_VALUE, W ; subtract AN3_VALUE from AN2_VALUE
-
-    ; apply sensibility value
-    ANDWF SNSBLTY_RANGE, W
+    ANDWF SNSBLTY_RANGE, W ; apply sensibility value
 
     ; rotate left or right if necessary
     BTFSC STATUS, 2 ; if the result is zero, do nothing
-    GOTO stopRotLR
+    GOTO $+9
     BTFSC STATUS, 0 ; if the result is negative, rotate left
-    GOTO rotLeft
+    GOTO $+3
     BTFSS STATUS, 0 ; if the result is positive, rotate right
-    GOTO rotRight
+    GOTO $+3
 
-    ; rotate one step up
-    rotLeft:
- BCF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in LOW
- BTFSS LIMIT_SW_F, 6 ; if the limit switch is in HIGH, dont send pulse
- BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
- CALL getDelay
- BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
- CALL getDelay
+    ; rotation options
+    CALL rotLeft
+    GOTO $+4
+    CALL rotRight
+    GOTO $+2
+    CALL stopRotLR
+    RETURN
 
- ; increment stepper motor position
- BTFSC LIMIT_SW_F, 6 ; if the limit switch is in HIGH, don't increment position
- GOTO $+4
- INCF MOTOR_POS_1L, F
- BTFSC STATUS, 0 ; if there is carry, increment MOTOR_POS_1H
- INCF MOTOR_POS_1H, F
- RETURN
+; subroutine to rotate one step up
+rotUp:
+    BCF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in LOW
+    BTFSS LIMIT_SW_F, 0 ; if the limit switch is in HIGH, dont send pulse
+    BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
+    CALL getDelay
+    BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
+    CALL getDelay
 
-    ; rotate one step down
-    rotRight:
- BSF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in HIGH
- BTFSS LIMIT_SW_F, 7 ; if the limit switch is in HIGH, dont send pulse
- BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
- CALL getDelay
- BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
- CALL getDelay
+    ; increment stepper motor position
+    BTFSC LIMIT_SW_F, 0 ; if the limit switch is in HIGH, don't increment position
+    GOTO $+4
+    INCF MOTOR_POS_0L, F
+    BTFSC STATUS, 0 ; if there is carry, increment MOTOR_POS_0H
+    INCF MOTOR_POS_0H, F
+    RETURN
 
- ; decrement stepper motor position
- BTFSC LIMIT_SW_F, 7 ; if the limit switch is in HIGH, don't increment position
- GOTO $+5
- MOVF MOTOR_POS_1L
- BTFSC STATUS, 2 ; if it is zero, decrement MOTOR_POS_1H
- DECF MOTOR_POS_1H, F
- DECF MOTOR_POS_1L, F
- RETURN
+; subroutine to rotate one step down
+rotDown:
+    BSF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in HIGH
+    BTFSS LIMIT_SW_F, 1 ; if the limit switch is in HIGH, dont send pulse
+    BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
+    CALL getDelay
+    BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
+    CALL getDelay
 
-    ; no rotation
-    stopRotLR:
- BCF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in LOW
- BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
- CALL getDelay
- CALL getDelay ; make two delays to complete one cycle
- RETURN
+    ; decrement stepper motor position
+    BTFSC LIMIT_SW_F, 1 ; if the limit switch is in HIGH, don't increment position
+    GOTO $+5
+    MOVF MOTOR_POS_0L
+    BTFSC STATUS, 2 ; if it is zero, decrement MOTOR_POS_0H
+    DECF MOTOR_POS_0H, F
+    DECF MOTOR_POS_0L, F
+    RETURN
+
+; subroutine to no rotation
+stopRotUD:
+    BCF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in LOW
+    BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
+    CALL getDelay
+    CALL getDelay ; make two delays to complete one cycle
+    RETURN
+
+; rotate one step up
+rotLeft:
+    BCF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in LOW
+    BTFSS LIMIT_SW_F, 2 ; if the limit switch is in HIGH, dont send pulse
+    BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
+    CALL getDelay
+    BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
+    CALL getDelay
+
+    ; increment stepper motor position
+    BTFSC LIMIT_SW_F, 2 ; if the limit switch is in HIGH, don't increment position
+    GOTO $+4
+    INCF MOTOR_POS_1L, F
+    BTFSC STATUS, 0 ; if there is carry, increment MOTOR_POS_1H
+    INCF MOTOR_POS_1H, F
+    RETURN
+
+; rotate one step down
+rotRight:
+    BSF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in HIGH
+    BTFSS LIMIT_SW_F, 3 ; if the limit switch is in HIGH, dont send pulse
+    BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
+    CALL getDelay
+    BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
+    CALL getDelay
+
+    ; decrement stepper motor position
+    BTFSC LIMIT_SW_F, 3 ; if the limit switch is in HIGH, don't increment position
+    GOTO $+5
+    MOVF MOTOR_POS_1L
+    BTFSC STATUS, 2 ; if it is zero, decrement MOTOR_POS_1H
+    DECF MOTOR_POS_1H, F
+    DECF MOTOR_POS_1L, F
+    RETURN
+
+; no rotation
+stopRotLR:
+    BCF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in LOW
+    BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
+    CALL getDelay
+    CALL getDelay ; make two delays to complete one cycle
+    RETURN
 
 ; subroutine to make a delay
 getDelay:
