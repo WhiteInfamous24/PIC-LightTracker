@@ -2551,13 +2551,13 @@ setup:
     BANKSEL ANSELH
     CLRF ANSELH ; set <((ANSELH) and 07Fh), 0:((ANSELH) and 07Fh), 5> as digitals
 
-    ; PORTC configuration (LEDs & stepper motors)
+    ; PORTC configuration (LEDs)
     BANKSEL TRISC
     CLRF TRISC ; set <((PORTC) and 07Fh), 0:((PORTC) and 07Fh), 7> as outputs
 
-    ; PORTD configuration (keyboard columns)
+    ; PORTD configuration (stepper motors & keyboard columns)
     BANKSEL TRISD
-    CLRF TRISD ; set <((PORTD) and 07Fh), 4:((PORTD) and 07Fh), 7> as outputs
+    CLRF TRISD ; set <((PORTD) and 07Fh), 0:((PORTD) and 07Fh), 7> as outputs
 
     ; general port configuration
     BANKSEL OPTION_REG ; enable global pull-ups and set pre-scaler (100=fast, 110=slow)
@@ -2613,6 +2613,7 @@ setup:
     CLRF KYBRD_BTN
     CLRF KYBRD_F
     CLRF LIMIT_SW_F
+    CLRF OP_MODE
 
     ; axis recognition sequence
     CALL moveUpToLimitSw
@@ -2641,7 +2642,15 @@ main:
     BCF STATUS, 5 ; clear ((STATUS) and 07Fh), 5 bit
     BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
 
-    ; move the light tracker
+    ; set the mode
+    MOVF KYBRD_BTN, W
+    BTFSS STATUS, 2
+    MOVWF OP_MODE
+
+    ; if OP_MODE is 0x01 call lightTrackerMode
+    MOVF OP_MODE, W
+    SUBLW 0x01
+    BTFSC STATUS, 2
     CALL lightTrackerMode
 
     GOTO main
@@ -2686,7 +2695,7 @@ ADCISR:
     BTFSS ADC_PORT_IT, 1
     BCF ADCON0, 3
 
-    ; end the ADCISR
+    ; end of ADCISR
     BCF PIR1, 6 ; clear ((PIR1) and 07Fh), 6 bit
     BSF ADCON0, 1 ; start ADC conversion (((ADCON0) and 07Fh), 1/DONE)
     RETURN
@@ -2718,25 +2727,7 @@ limitSwitchsISR:
     BTFSC PORTB, 7
     BCF LIMIT_SW_F, 3
 
-    ; turn on/off LEDs
-    BTFSC LIMIT_SW_F, 0
-    BSF PORTC, 4
-    BTFSS LIMIT_SW_F, 0
-    BCF PORTC, 4
-    BTFSC LIMIT_SW_F, 1
-    BSF PORTC, 5
-    BTFSS LIMIT_SW_F, 1
-    BCF PORTC, 5
-    BTFSC LIMIT_SW_F, 2
-    BSF PORTC, 6
-    BTFSS LIMIT_SW_F, 2
-    BCF PORTC, 6
-    BTFSC LIMIT_SW_F, 3
-    BSF PORTC, 7
-    BTFSS LIMIT_SW_F, 3
-    BCF PORTC, 7
-
-    ; return from limitSwitchsISR
+    ; end of limitSwitchsISR
     BCF INTCON, 1 ; clear ((INTCON) and 07Fh), 1 bit
     BCF INTCON, 0 ; clear ((INTCON) and 07Fh), 0 bit
     RETURN
@@ -2760,7 +2751,7 @@ keyboardISR:
     MOVLW 0b00000001 ; save current column
     MOVWF KYBRD_BTN
     CALL searchInRow ; find if the row is found with the current column
-    BTFSC KYBRD_F, 0 ; if the keyboard found flag is set return
+    BTFSC KYBRD_F, 0 ; if the keyboard found flag is set go to end
     GOTO $+29
 
     ; search in column 1
@@ -2771,7 +2762,7 @@ keyboardISR:
     MOVLW 0b00000010 ; save current column
     MOVWF KYBRD_BTN
     CALL searchInRow ; find if the row is found with the current column
-    BTFSC KYBRD_F, 0 ; if the keyboard found flag is set return
+    BTFSC KYBRD_F, 0 ; if the keyboard found flag is set go to end
     GOTO $+20
 
     ; search in column 2
@@ -2782,7 +2773,7 @@ keyboardISR:
     MOVLW 0b00000100 ; save current column
     MOVWF KYBRD_BTN
     CALL searchInRow ; find if the row is found with the current column
-    BTFSC KYBRD_F, 0 ; if the keyboard found flag is set return
+    BTFSC KYBRD_F, 0 ; if the keyboard found flag is set go to end
     GOTO $+11
 
     ; search in column 3
@@ -2793,14 +2784,18 @@ keyboardISR:
     MOVLW 0b00001000 ; save current column
     MOVWF KYBRD_BTN
     CALL searchInRow ; find if the row is found with the current column
-    BTFSC KYBRD_F, 0 ; if the keyboard found flag is set, return
+    BTFSC KYBRD_F, 0 ; if the keyboard found flag is set go to end
     GOTO $+2
 
     ; case if there is no match
     CLRF KYBRD_BTN
 
-    ; return from keyboardISR
-    CLRF PORTD
+    ; end of keyboardISR
+    CALL kybrdToHexConv
+    BCF PORTD, 4
+    BCF PORTD, 5
+    BCF PORTD, 6
+    BCF PORTD, 7
     BCF INTCON, 1 ; clear ((INTCON) and 07Fh), 1 bit
     BCF INTCON, 0 ; clear ((INTCON) and 07Fh), 0 bit
     RETURN
@@ -2973,11 +2968,11 @@ lightTrackerMode:
 
 ; subroutine to rotate one step up
 rotUp:
-    BCF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in LOW
+    BCF PORTD, 0 ; set direction (((PORTD) and 07Fh), 0) in LOW
     BTFSS LIMIT_SW_F, 0 ; if the limit switch is in HIGH, dont send pulse
-    BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
+    BSF PORTD, 1 ; set pulse (((PORTD) and 07Fh), 1) in HIGH
     CALL getDelay
-    BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
+    BCF PORTD, 1 ; set pulse (((PORTD) and 07Fh), 1) in LOW
     CALL getDelay
 
     ; increment stepper motor position
@@ -2990,11 +2985,11 @@ rotUp:
 
 ; subroutine to rotate one step down
 rotDown:
-    BSF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in HIGH
+    BSF PORTD, 0 ; set direction (((PORTD) and 07Fh), 0) in HIGH
     BTFSS LIMIT_SW_F, 1 ; if the limit switch is in HIGH, dont send pulse
-    BSF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in HIGH
+    BSF PORTD, 1 ; set pulse (((PORTD) and 07Fh), 1) in HIGH
     CALL getDelay
-    BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
+    BCF PORTD, 1 ; set pulse (((PORTD) and 07Fh), 1) in LOW
     CALL getDelay
 
     ; decrement stepper motor position
@@ -3008,19 +3003,19 @@ rotDown:
 
 ; subroutine to no rotation
 stopRotUD:
-    BCF PORTC, 0 ; set direction (((PORTC) and 07Fh), 0) in LOW
-    BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
+    BCF PORTD, 0 ; set direction (((PORTD) and 07Fh), 0) in LOW
+    BCF PORTD, 1 ; set pulse (((PORTD) and 07Fh), 1) in LOW
     CALL getDelay
     CALL getDelay ; make two delays to complete one cycle
     RETURN
 
 ; rotate one step up
 rotLeft:
-    BCF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in LOW
+    BCF PORTD, 2 ; set direction (((PORTD) and 07Fh), 2) in LOW
     BTFSS LIMIT_SW_F, 2 ; if the limit switch is in HIGH, dont send pulse
-    BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
+    BSF PORTD, 3 ; set pulse (((PORTD) and 07Fh), 3) in HIGH
     CALL getDelay
-    BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
+    BCF PORTD, 3 ; set pulse (((PORTD) and 07Fh), 3) in LOW
     CALL getDelay
 
     ; increment stepper motor position
@@ -3033,11 +3028,11 @@ rotLeft:
 
 ; rotate one step down
 rotRight:
-    BSF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in HIGH
+    BSF PORTD, 2 ; set direction (((PORTD) and 07Fh), 2) in HIGH
     BTFSS LIMIT_SW_F, 3 ; if the limit switch is in HIGH, dont send pulse
-    BSF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in HIGH
+    BSF PORTD, 3 ; set pulse (((PORTD) and 07Fh), 3) in HIGH
     CALL getDelay
-    BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
+    BCF PORTD, 3 ; set pulse (((PORTD) and 07Fh), 3) in LOW
     CALL getDelay
 
     ; decrement stepper motor position
@@ -3051,8 +3046,8 @@ rotRight:
 
 ; no rotation
 stopRotLR:
-    BCF PORTC, 2 ; set direction (((PORTC) and 07Fh), 2) in LOW
-    BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
+    BCF PORTD, 2 ; set direction (((PORTD) and 07Fh), 2) in LOW
+    BCF PORTD, 3 ; set pulse (((PORTD) and 07Fh), 3) in LOW
     CALL getDelay
     CALL getDelay ; make two delays to complete one cycle
     RETURN
