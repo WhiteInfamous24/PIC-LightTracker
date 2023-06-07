@@ -2505,23 +2505,33 @@ W_TMP EQU 0x20 ; temporary W
 STATUS_TMP EQU 0x21 ; temporary STATUS
 
 ; timer 0
-TMR0_CNTR EQU 0x30 ; TMR0 counter
-TMR0_CNTR_REF EQU 0x31 ; TMR0 counter temporary reference
+TMR0_CNTR EQU 0x28 ; TMR0 counter
+TMR0_CNTR_REF EQU 0x29 ; TMR0 counter temporary reference
 
 ; ADC
-AN0_VALUE EQU 0x40
-AN1_VALUE EQU 0x41
-AN2_VALUE EQU 0x42
-AN3_VALUE EQU 0x43
-ADC_PORT_IT EQU 0x44 ; ADC port iterator
-SNSBLTY_RANGE EQU 0x45 ; sensibility range to prevent oscilations
+AN0_VALUE EQU 0x30
+AN1_VALUE EQU 0x31
+AN2_VALUE EQU 0x32
+AN3_VALUE EQU 0x33
+ADC_PORT_IT EQU 0x34 ; ADC port iterator
+SNSBLTY_RANGE EQU 0x35 ; sensibility range to prevent oscilations
 
 ; keyboard
-KYBRD_BTN EQU 0x50 ; store the pressed button
-KYBRD_F EQU 0x51 ; keyboard flags
+KYBRD_BTN EQU 0x38 ; store the pressed button
+KYBRD_F EQU 0x39 ; keyboard flags
 
 ; limit switchs
-LIMIT_SW_F EQU 0X60 ; limit switchs flags
+LIMIT_SW_F EQU 0X40 ; limit switchs flags
+
+; stepper motors
+MOTOR_POS_0L EQU 0x48 ; stepper motor 0 position low value
+MOTOR_POS_0H EQU 0x49 ; stepper motor 0 position high value
+MOTOR_POS_1L EQU 0x4A ; stepper motor 1 position low value
+MOTOR_POS_1H EQU 0x4B ; stepper motor 1 position high value
+STEP_CNTR_AUX EQU 0x4C ; auxiliary step counter
+
+; light tracker operation modes
+OP_MODE EQU 0x50 ; operation mode
 
 ; program setup
 setup:
@@ -2598,7 +2608,7 @@ setup:
     ; variables initialization
     MOVLW AN0_VALUE ; starting register to store <AN0:AN3> values
     MOVWF ADC_PORT_IT
-    MOVLW 0b11111000 ; sensibility range value
+    MOVLW 0b11110000 ; sensibility range value
     MOVWF SNSBLTY_RANGE
     CLRF KYBRD_BTN
     CLRF KYBRD_F
@@ -2606,9 +2616,23 @@ setup:
 
     ; axis recognition sequence
     CALL moveUpToLimitSw
+    CALL getDelay
     CALL moveDownToLimitSw
+    CALL getDelay
+    MOVLW 0xAC
+    MOVWF STEP_CNTR_AUX
+    CALL rotUp
+    DECFSZ STEP_CNTR_AUX
+    GOTO $-2
     CALL moveLeftToLimitSw
+    CALL getDelay
     CALL moveRightToLimitSw
+    CALL getDelay
+    MOVLW 0xD0
+    MOVWF STEP_CNTR_AUX
+    CALL rotLeft
+    DECFSZ STEP_CNTR_AUX
+    GOTO $-2
 
 ; main program loop
 main:
@@ -2882,6 +2906,10 @@ moveUpToLimitSw:
     CALL rotUp
     BTFSS LIMIT_SW_F, 4
     GOTO $-2
+
+    ; set the zero position of the stepper motor
+    CLRF MOTOR_POS_0L
+    CLRF MOTOR_POS_0H
     RETURN
 
 ; subroutine to move the stepper motor down to the limit switch
@@ -2896,6 +2924,10 @@ moveLeftToLimitSw:
     CALL rotLeft
     BTFSS LIMIT_SW_F, 6
     GOTO $-2
+
+    ; set the zero position of the stepper motor
+    CLRF MOTOR_POS_1L
+    CLRF MOTOR_POS_1H
     RETURN
 
 ; subroutine to move the stepper motor right to the limit switch
@@ -2931,6 +2963,13 @@ moveUpDown:
  CALL getDelay
  BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
  CALL getDelay
+
+ ; increment stepper motor position
+ BTFSC LIMIT_SW_F, 4 ; if the limit switch is in HIGH, don't increment position
+ GOTO $+4
+ INCF MOTOR_POS_0L, F
+ BTFSC STATUS, 0 ; if there is carry, increment MOTOR_POS_0H
+ INCF MOTOR_POS_0H, F
  RETURN
 
     ; rotate one step down
@@ -2941,6 +2980,14 @@ moveUpDown:
  CALL getDelay
  BCF PORTC, 1 ; set pulse (((PORTC) and 07Fh), 1) in LOW
  CALL getDelay
+
+ ; decrement stepper motor position
+ BTFSC LIMIT_SW_F, 5 ; if the limit switch is in HIGH, don't increment position
+ GOTO $+5
+ MOVF MOTOR_POS_0L
+ BTFSC STATUS, 2 ; if it is zero, decrement MOTOR_POS_0H
+ DECF MOTOR_POS_0H, F
+ DECF MOTOR_POS_0L, F
  RETURN
 
     ; no rotation
@@ -2977,6 +3024,13 @@ moveLeftRight:
  CALL getDelay
  BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
  CALL getDelay
+
+ ; increment stepper motor position
+ BTFSC LIMIT_SW_F, 6 ; if the limit switch is in HIGH, don't increment position
+ GOTO $+4
+ INCF MOTOR_POS_1L, F
+ BTFSC STATUS, 0 ; if there is carry, increment MOTOR_POS_1H
+ INCF MOTOR_POS_1H, F
  RETURN
 
     ; rotate one step down
@@ -2987,6 +3041,14 @@ moveLeftRight:
  CALL getDelay
  BCF PORTC, 3 ; set pulse (((PORTC) and 07Fh), 3) in LOW
  CALL getDelay
+
+ ; decrement stepper motor position
+ BTFSC LIMIT_SW_F, 7 ; if the limit switch is in HIGH, don't increment position
+ GOTO $+5
+ MOVF MOTOR_POS_1L
+ BTFSC STATUS, 2 ; if it is zero, decrement MOTOR_POS_1H
+ DECF MOTOR_POS_1H, F
+ DECF MOTOR_POS_1L, F
  RETURN
 
     ; no rotation
