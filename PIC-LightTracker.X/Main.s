@@ -283,7 +283,7 @@ limitSwitchsISR:
     BCF	    INTCON, 1	; clear INTF bit
     BCF	    INTCON, 0	; clear RBIF bit
     RETURN
-	
+    
 ; interruption subroutine to get pressed button in keyboard
 keyboardISR:
     
@@ -348,8 +348,8 @@ keyboardISR:
     BCF	    PORTD, 5
     BCF	    PORTD, 6
     BCF	    PORTD, 7
-    BCF	    INTCON, 1	    ; clear INTF bit
-    BCF	    INTCON, 0	    ; clear RBIF bit
+    BCF	    INTCON, 1		; clear INTF bit
+    BCF	    INTCON, 0		; clear RBIF bit
     RETURN
 	
 ; subroutine to find if there are any set bits in the row
