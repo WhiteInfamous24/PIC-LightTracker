@@ -2480,8 +2480,10 @@ INT_VECT:
 
     ; keyboard/limit switchs interruption
     BANKSEL INTCON
-    BTFSC INTCON, 0 ; check ((INTCON) and 07Fh), 0 bit
+    BTFSS INTCON, 0 ; check ((INTCON) and 07Fh), 0 bit
+    GOTO $+3
     CALL limitSwitchsISR
+    CALL keyboardISR
 
     ; TMR0 interruption
     BANKSEL INTCON
@@ -2652,6 +2654,36 @@ main:
     SUBLW 0x01
     BTFSC STATUS, 2
     CALL lightTrackerMode
+
+    ; if OP_MODE is 0x09 call rotate up
+    MOVF OP_MODE, W
+    SUBLW 0x09
+    BTFSC STATUS, 2
+    CALL rotUp
+
+    ; if OP_MODE is 0x08 call rotate up
+    MOVF OP_MODE, W
+    SUBLW 0x08
+    BTFSC STATUS, 2
+    CALL rotDown
+
+    ; if OP_MODE is 0x0C call rotate up
+    MOVF OP_MODE, W
+    SUBLW 0x0C
+    BTFSC STATUS, 2
+    CALL rotLeft
+
+    ; if OP_MODE is 0x0D call rotate up
+    MOVF OP_MODE, W
+    SUBLW 0x0D
+    BTFSC STATUS, 2
+    CALL rotRight
+
+    ; if OP_MODE is 0x0F do nothing
+    MOVF OP_MODE, W
+    SUBLW 0x0F
+    BTFSC STATUS, 2
+    CALL getDelay
 
     GOTO main
 
