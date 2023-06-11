@@ -2553,15 +2553,16 @@ setup:
     BANKSEL ANSELH
     CLRF ANSELH ; set <((ANSELH) and 07Fh), 0:((ANSELH) and 07Fh), 5> as digitals
 
-    ; PORTC configuration (LEDs)
+    ; PORTC configuration (USART)
     BANKSEL TRISC
-    CLRF TRISC ; set <((PORTC) and 07Fh), 0:((PORTC) and 07Fh), 7> as outputs
+    MOVLW 0b11000000 ; set <((PORTC) and 07Fh), 6:((PORTC) and 07Fh), 7> as inputs
+    MOVWF TRISC
 
     ; PORTD configuration (stepper motors & keyboard columns)
     BANKSEL TRISD
     CLRF TRISD ; set <((PORTD) and 07Fh), 0:((PORTD) and 07Fh), 7> as outputs
 
-    ; general port configuration
+    ; general ports configurations
     BANKSEL OPTION_REG ; enable global pull-ups and set pre-scaler (100=fast, 110=slow)
     MOVLW 0b00000100 ; | /RBPU | ((OPTION_REG) and 07Fh), 6 | ((OPTION_REG) and 07Fh), 5 | ((OPTION_REG) and 07Fh), 4 | ((OPTION_REG) and 07Fh), 3 | ((OPTION_REG) and 07Fh), 2 | ((OPTION_REG) and 07Fh), 1 | ((OPTION_REG) and 07Fh), 0 |
     MOVWF OPTION_REG
@@ -2569,43 +2570,56 @@ setup:
     MOVLW 0b11111111 ; enable pull-ups in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
     MOVWF WPUB
 
-    ; interruptions configuration
-    BANKSEL INTCON ; enable global interruptions, interruptions in ((INTCON) and 07Fh), 6, interruptions in TMR0 and interruptions in PORTC
-    MOVLW 0b11111000 ; | ((INTCON) and 07Fh), 7 | ((INTCON) and 07Fh), 6 | ((INTCON) and 07Fh), 5 | ((INTCON) and 07Fh), 4 | ((INTCON) and 07Fh), 3 | ((INTCON) and 07Fh), 2 | ((INTCON) and 07Fh), 1 | ((INTCON) and 07Fh), 0 |
-    MOVWF INTCON
-    BANKSEL IOCB
-    MOVLW 0b11111111 ; enable interruptions in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
-    MOVWF IOCB
-    BANKSEL PIE1 ; enable interruptions in ADC
-    MOVLW 0b01000000 ; | xx | ((PIE1) and 07Fh), 6 | ((PIE1) and 07Fh), 5 | ((PIE1) and 07Fh), 4 | ((PIE1) and 07Fh), 3 | ((PIE1) and 07Fh), 2 | ((PIE1) and 07Fh), 1 | ((PIE1) and 07Fh), 0 |
-    MOVWF PIE1
-
     ; ADC configuration
     BANKSEL VRCON ; set the reference voltage
-    MOVLW 0b00000000 ; | ((VRCON) and 07Fh), 7 | ((VRCON) and 07Fh), 6 | ((VRCON) and 07Fh), 5 | ((VRCON) and 07Fh), 4 | ((VRCON) and 07Fh), 3 | ((VRCON) and 07Fh), 2 | ((VRCON) and 07Fh), 1 | ((VRCON) and 07Fh), 0 |
-    MOVWF VRCON
+    CLRF VRCON ; | ((VRCON) and 07Fh), 7 | ((VRCON) and 07Fh), 6 | ((VRCON) and 07Fh), 5 | ((VRCON) and 07Fh), 4 | ((VRCON) and 07Fh), 3 | ((VRCON) and 07Fh), 2 | ((VRCON) and 07Fh), 1 | ((VRCON) and 07Fh), 0 |
     BANKSEL ADCON0 ; set the ADC clock, set the input channel AN0 and turn on the ADC
     MOVLW 0b10000001 ; | ((ADCON0) and 07Fh), 7 | ((ADCON0) and 07Fh), 6 | ((ADCON0) and 07Fh), 5 | ((ADCON0) and 07Fh), 4 | ((ADCON0) and 07Fh), 3 | ((ADCON0) and 07Fh), 2 | ((ADCON0) and 07Fh), 1/DONE | ((ADCON0) and 07Fh), 0 |
     MOVWF ADCON0
     BANKSEL ADCON1 ; set reference voltage source in VDD & VSS ans justify the result to the left
-    MOVLW 0b00000000 ; | ((ADCON1) and 07Fh), 7 | xx | ((ADCON1) and 07Fh), 5 | ((ADCON1) and 07Fh), 4 | xx | xx | xx | xx |
-    MOVWF ADCON1
+    CLRF ADCON1 ; | ((ADCON1) and 07Fh), 7 | xx | ((ADCON1) and 07Fh), 5 | ((ADCON1) and 07Fh), 4 | xx | xx | xx | xx |
+
+    ; EUSART configuration
+    BANKSEL TXSTA
+    MOVLW 0b00100010 ; | ((TXSTA) and 07Fh), 7 | ((TXSTA) and 07Fh), 6 | ((TXSTA) and 07Fh), 5 | ((TXSTA) and 07Fh), 4 | ((TXSTA) and 07Fh), 3 | ((TXSTA) and 07Fh), 2 | ((TXSTA) and 07Fh), 1 | ((TXSTA) and 07Fh), 0 |
+    MOVWF TXSTA
+    BANKSEL RCSTA
+    MOVLW 0b10010000 ; | ((RCSTA) and 07Fh), 7 | ((RCSTA) and 07Fh), 6 | ((RCSTA) and 07Fh), 5 | ((RCSTA) and 07Fh), 4 | ((RCSTA) and 07Fh), 3 | ((RCSTA) and 07Fh), 2 | ((RCSTA) and 07Fh), 1 | ((RCSTA) and 07Fh), 0 |
+    MOVWF RCSTA
+    BANKSEL SPBRG
+    MOVLW 0xCF ; set the baud rate generator
+    MOVWF SPBRG
+
+    ; interruptions configuration
+    BANKSEL INTCON ; enable interruptions in ((INTCON) and 07Fh), 6, interruptions in TMR0 and interruptions in PORTC
+    MOVLW 0b01111000 ; | ((INTCON) and 07Fh), 7 | ((INTCON) and 07Fh), 6 | ((INTCON) and 07Fh), 5 | ((INTCON) and 07Fh), 4 | ((INTCON) and 07Fh), 3 | ((INTCON) and 07Fh), 2 | ((INTCON) and 07Fh), 1 | ((INTCON) and 07Fh), 0 |
+    MOVWF INTCON
+    BANKSEL IOCB
+    MOVLW 0b11111111 ; enable interruptions in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
+    MOVWF IOCB
+    BANKSEL PIE1 ; enable interruptions in ADC and in EUSART receive
+    MOVLW 0b01100000 ; | xx | ((PIE1) and 07Fh), 6 | ((PIE1) and 07Fh), 5 | ((PIE1) and 07Fh), 4 | ((PIE1) and 07Fh), 3 | ((PIE1) and 07Fh), 2 | ((PIE1) and 07Fh), 1 | ((PIE1) and 07Fh), 0 |
+    MOVWF PIE1
+
+    ; PORTD initialization
+    BANKSEL PORTD
+    CLRF PORTD ; set PORTD in LOW
 
     ; TMR0 initialization
     BANKSEL TMR0
-    CLRF TMR0
+    CLRF TMR0 ; set initial value for TMR0
 
     ; ADC initialization
     BANKSEL ADCON0
     BSF ADCON0, 1 ; start ADC conversion (((ADCON0) and 07Fh), 1/DONE)
 
-    ; PORTC initialization
-    BANKSEL PORTC
-    CLRF PORTC
+    ; interruptions initialization
+    BANKSEL INTCON
+    BSF INTCON, 7 ; enable global interruptions
 
-    ; PORTD initialization
-    BANKSEL PORTD
-    CLRF PORTD
+    ; select memory bank 0 <00>
+    BCF STATUS, 5 ; clear ((STATUS) and 07Fh), 5 bit
+    BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
 
     ; variables initialization
     MOVLW AN0_VALUE ; starting register to store <AN0:AN3> values
@@ -2618,24 +2632,24 @@ setup:
     CLRF OP_MODE
 
     ; axis recognition sequence
-    CALL moveUpToLimitSw
-    CALL getDelay
-    CALL moveDownToLimitSw
-    CALL getDelay
-    MOVLW 0xAC
-    MOVWF STEP_CNTR_AUX
-    CALL rotUp
-    DECFSZ STEP_CNTR_AUX
-    GOTO $-2
-    CALL moveLeftToLimitSw
-    CALL getDelay
-    CALL moveRightToLimitSw
-    CALL getDelay
-    MOVLW 0xD0
-    MOVWF STEP_CNTR_AUX
-    CALL rotLeft
-    DECFSZ STEP_CNTR_AUX
-    GOTO $-2
+; CALL moveUpToLimitSw
+; CALL getDelay
+; CALL moveDownToLimitSw
+; CALL getDelay
+; MOVLW 0xAC
+; MOVWF STEP_CNTR_AUX
+; CALL rotUp
+; DECFSZ STEP_CNTR_AUX
+; GOTO $-2
+; CALL moveLeftToLimitSw
+; CALL getDelay
+; CALL moveRightToLimitSw
+; CALL getDelay
+; MOVLW 0xD0
+; MOVWF STEP_CNTR_AUX
+; CALL rotLeft
+; DECFSZ STEP_CNTR_AUX
+; GOTO $-2
 
 ; main program loop
 main:
@@ -2644,48 +2658,71 @@ main:
     BCF STATUS, 5 ; clear ((STATUS) and 07Fh), 5 bit
     BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
 
-    ; set the mode
+    ; EUSART message check
+    MOVLW 0x48 ; ASCII 'H'
+    CALL EUSARTsend
+    MOVLW 0x4F ; ASCII 'O'
+    CALL EUSARTsend
+    MOVLW 0x4C ; ASCII 'L'
+    CALL EUSARTsend
+    MOVLW 0x41 ; ASCII 'A'
+    CALL EUSARTsend
+
+    ; set the operation mode
     MOVF KYBRD_BTN, W
     BTFSS STATUS, 2
     MOVWF OP_MODE
 
-    ; if OP_MODE is 0x01 call lightTrackerMode
+    ; if OP_MODE is 0x03 call lightTrackerMode
     MOVF OP_MODE, W
-    SUBLW 0x01
+    SUBLW 0x03
     BTFSC STATUS, 2
     CALL lightTrackerMode
 
-    ; if OP_MODE is 0x09 call rotate up
+    ; if OP_MODE is 0x0A call rotate up
     MOVF OP_MODE, W
-    SUBLW 0x09
+    SUBLW 0x0A
     BTFSC STATUS, 2
     CALL rotUp
 
-    ; if OP_MODE is 0x08 call rotate up
+    ; if OP_MODE is 0x08 call rotate down
     MOVF OP_MODE, W
     SUBLW 0x08
     BTFSC STATUS, 2
     CALL rotDown
 
-    ; if OP_MODE is 0x0C call rotate up
+    ; if OP_MODE is 0x05 call rotate left
     MOVF OP_MODE, W
-    SUBLW 0x0C
+    SUBLW 0x05
     BTFSC STATUS, 2
     CALL rotLeft
 
-    ; if OP_MODE is 0x0D call rotate up
+    ; if OP_MODE is 0x0D call rotate right
     MOVF OP_MODE, W
     SUBLW 0x0D
     BTFSC STATUS, 2
     CALL rotRight
 
-    ; if OP_MODE is 0x0F do nothing
+    ; if OP_MODE is 0x09 do nothing
     MOVF OP_MODE, W
-    SUBLW 0x0F
+    SUBLW 0x09
     BTFSC STATUS, 2
     CALL getDelay
 
     GOTO main
+
+; EUSART transmit pre-loaded value in W
+EUSARTsend:
+    BANKSEL TXREG
+    MOVWF TXREG ; load the W data into TXREG
+    BANKSEL TXSTA
+    BTFSC TXSTA, 1 ; check if the data has been sent
+    GOTO $-1 ; loop until the data has been sent
+    RETURN
+
+; EUSART receive
+EUSARTreceiveISR:
+    RETURN
 
 ; interruption subroutine to control TMR0
 TMR0ISR:

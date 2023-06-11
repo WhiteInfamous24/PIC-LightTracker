@@ -105,15 +105,16 @@ setup:
     BANKSEL ANSELH
     CLRF    ANSELH		; set <ANS8:ANS13> as digitals
     
-    ; PORTC configuration (LEDs)
+    ; PORTC configuration (USART)
     BANKSEL TRISC
-    CLRF    TRISC		; set <RC0:RC7> as outputs
+    MOVLW   0b11000000		; set <RC6:RC7> as inputs
+    MOVWF   TRISC
     
     ; PORTD configuration (stepper motors & keyboard columns)
     BANKSEL TRISD
     CLRF    TRISD		; set <RD0:RD7> as outputs
     
-    ; general port configuration
+    ; general ports configurations
     BANKSEL OPTION_REG		; enable global pull-ups and set pre-scaler (100=fast, 110=slow) 
     MOVLW   0b00000100		; | /RBPU | INTEDG | T0CS | T0SE | PSA | PS2 | PS1 | PS0 |
     MOVWF   OPTION_REG
@@ -121,43 +122,56 @@ setup:
     MOVLW   0b11111111		; enable pull-ups in <RB0:RB7>
     MOVWF   WPUB
     
-    ; interruptions configuration
-    BANKSEL INTCON		; enable global interruptions, interruptions in PEIE, interruptions in TMR0 and interruptions in PORTC
-    MOVLW   0b11111000		; | GIE | PEIE | T0IE | INTE | RBIE | T0IF | INTF | RBIF |
-    MOVWF   INTCON
-    BANKSEL IOCB
-    MOVLW   0b11111111		; enable interruptions in <RB0:RB7>
-    MOVWF   IOCB
-    BANKSEL PIE1		; enable interruptions in ADC
-    MOVLW   0b01000000		; | xx | ADIE | RCIE | TXIE | SSPIE | CCP1IE | TMR2IE | TMR1IE |
-    MOVWF   PIE1
-    
     ; ADC configuration
     BANKSEL VRCON		; set the reference voltage
-    MOVLW   0b00000000		; | VREN | VROE | VRR | VRSS | VR3 | VR2 | VR1 | VR0 |
-    MOVWF   VRCON
+    CLRF    VRCON		; | VREN | VROE | VRR | VRSS | VR3 | VR2 | VR1 | VR0 |
     BANKSEL ADCON0		; set the ADC clock, set the input channel AN0 and turn on the ADC
     MOVLW   0b10000001		; | ADCS1 | ADCS0 | CHS3 | CHS2 | CHS1 | CHS0 | GO/DONE | ADON |
     MOVWF   ADCON0
     BANKSEL ADCON1		; set reference voltage source in VDD & VSS ans justify the result to the left
-    MOVLW   0b00000000		; | ADFM | xx | VCFG1 | VCFG0 | xx | xx | xx | xx |
-    MOVWF   ADCON1
+    CLRF    ADCON1		; | ADFM | xx | VCFG1 | VCFG0 | xx | xx | xx | xx |
+    
+    ; EUSART configuration
+    BANKSEL TXSTA
+    MOVLW   0b00100010		; | CSRC | TX9 | TXEN | SYNC | SENDB | BRGH | TRMT | TX9D |
+    MOVWF   TXSTA
+    BANKSEL RCSTA
+    MOVLW   0b10010000		; | SPEN | RX9 | SREN | CREN | ADDEN | FERR | OERR | RX9D |
+    MOVWF   RCSTA
+    BANKSEL SPBRG
+    MOVLW   0xCF		; set the baud rate generator
+    MOVWF   SPBRG
+    
+    ; interruptions configuration
+    BANKSEL INTCON		; enable  interruptions in PEIE, interruptions in TMR0 and interruptions in PORTC
+    MOVLW   0b01111000		; | GIE | PEIE | T0IE | INTE | RBIE | T0IF | INTF | RBIF |
+    MOVWF   INTCON
+    BANKSEL IOCB
+    MOVLW   0b11111111		; enable interruptions in <RB0:RB7>
+    MOVWF   IOCB
+    BANKSEL PIE1		; enable interruptions in ADC and in EUSART receive
+    MOVLW   0b01100000		; | xx | ADIE | RCIE | TXIE | SSPIE | CCP1IE | TMR2IE | TMR1IE |
+    MOVWF   PIE1
+    
+    ; PORTD initialization
+    BANKSEL PORTD
+    CLRF    PORTD		; set PORTD in LOW
     
     ; TMR0 initialization
     BANKSEL TMR0
-    CLRF    TMR0
+    CLRF    TMR0		; set initial value for TMR0
     
     ; ADC initialization
     BANKSEL ADCON0
     BSF     ADCON0, 1		; start ADC conversion (GO/DONE)
     
-    ; PORTC initialization
-    BANKSEL PORTC
-    CLRF    PORTC
+    ; interruptions initialization
+    BANKSEL INTCON
+    BSF	    INTCON, 7		; enable global interruptions
     
-    ; PORTD initialization
-    BANKSEL PORTD
-    CLRF    PORTD
+    ; select memory bank 0 <00>
+    BCF	    STATUS, 5		; clear RP0 bit
+    BCF	    STATUS, 6		; clear RP1 bit
     
     ; variables initialization
     MOVLW   AN0_VALUE		; starting register to store <AN0:AN3> values
@@ -170,24 +184,24 @@ setup:
     CLRF    OP_MODE
     
     ; axis recognition sequence
-    CALL    moveUpToLimitSw
-    CALL    getDelay
-    CALL    moveDownToLimitSw
-    CALL    getDelay
-    MOVLW   0xAC
-    MOVWF   STEP_CNTR_AUX
-    CALL    rotUp
-    DECFSZ  STEP_CNTR_AUX
-    GOTO    $-2
-    CALL    moveLeftToLimitSw
-    CALL    getDelay
-    CALL    moveRightToLimitSw
-    CALL    getDelay
-    MOVLW   0xD0
-    MOVWF   STEP_CNTR_AUX
-    CALL    rotLeft
-    DECFSZ  STEP_CNTR_AUX
-    GOTO    $-2
+;    CALL    moveUpToLimitSw
+;    CALL    getDelay
+;    CALL    moveDownToLimitSw
+;    CALL    getDelay
+;    MOVLW   0xAC
+;    MOVWF   STEP_CNTR_AUX
+;    CALL    rotUp
+;    DECFSZ  STEP_CNTR_AUX
+;    GOTO    $-2
+;    CALL    moveLeftToLimitSw
+;    CALL    getDelay
+;    CALL    moveRightToLimitSw
+;    CALL    getDelay
+;    MOVLW   0xD0
+;    MOVWF   STEP_CNTR_AUX
+;    CALL    rotLeft
+;    DECFSZ  STEP_CNTR_AUX
+;    GOTO    $-2
 
 ; main program loop
 main:
@@ -196,48 +210,71 @@ main:
     BCF	    STATUS, 5		; clear RP0 bit
     BCF	    STATUS, 6		; clear RP1 bit
     
-    ; set the mode
+    ; EUSART message check
+    MOVLW   0x48		; ASCII 'H'
+    CALL    EUSARTsend
+    MOVLW   0x4F		; ASCII 'O'
+    CALL    EUSARTsend
+    MOVLW   0x4C		; ASCII 'L'
+    CALL    EUSARTsend
+    MOVLW   0x41		; ASCII 'A'
+    CALL    EUSARTsend
+    
+    ; set the operation mode
     MOVF    KYBRD_BTN, W
     BTFSS   STATUS, 2
     MOVWF   OP_MODE
     
-    ; if OP_MODE is 0x01 call lightTrackerMode
+    ; if OP_MODE is 0x03 call lightTrackerMode
     MOVF    OP_MODE, W
-    SUBLW   0x01
+    SUBLW   0x03
     BTFSC   STATUS, 2
     CALL    lightTrackerMode
     
-    ; if OP_MODE is 0x09 call rotate up
+    ; if OP_MODE is 0x0A call rotate up
     MOVF    OP_MODE, W
-    SUBLW   0x09
+    SUBLW   0x0A
     BTFSC   STATUS, 2
     CALL    rotUp
     
-    ; if OP_MODE is 0x08 call rotate up
+    ; if OP_MODE is 0x08 call rotate down
     MOVF    OP_MODE, W
     SUBLW   0x08
     BTFSC   STATUS, 2
     CALL    rotDown
     
-    ; if OP_MODE is 0x0C call rotate up
+    ; if OP_MODE is 0x05 call rotate left
     MOVF    OP_MODE, W
-    SUBLW   0x0C
+    SUBLW   0x05
     BTFSC   STATUS, 2
     CALL    rotLeft
     
-    ; if OP_MODE is 0x0D call rotate up
+    ; if OP_MODE is 0x0D call rotate right
     MOVF    OP_MODE, W
     SUBLW   0x0D
     BTFSC   STATUS, 2
     CALL    rotRight
     
-    ; if OP_MODE is 0x0F do nothing
+    ; if OP_MODE is 0x09 do nothing
     MOVF    OP_MODE, W
-    SUBLW   0x0F
+    SUBLW   0x09
     BTFSC   STATUS, 2
     CALL    getDelay
     
     GOTO    main
+    
+; EUSART transmit pre-loaded value in W
+EUSARTsend:
+    BANKSEL TXREG
+    MOVWF   TXREG		; load the W data into TXREG
+    BANKSEL TXSTA
+    BTFSC   TXSTA, 1		; check if the data has been sent
+    GOTO    $-1			; loop until the data has been sent
+    RETURN
+
+; EUSART receive
+EUSARTreceiveISR:
+    RETURN
     
 ; interruption subroutine to control TMR0
 TMR0ISR:
