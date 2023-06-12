@@ -2667,11 +2667,25 @@ main:
     CALL EUSARTsend
     MOVLW 'H' ; ASCII 0x48
     CALL EUSARTsend
-    MOVLW 'O' ; ASCII 0x4F
+    MOVLW 'E' ; ASCII 0x45
     CALL EUSARTsend
     MOVLW 'L' ; ASCII 0x4C
     CALL EUSARTsend
-    MOVLW 'A' ; ASCII 0x41
+    MOVLW 'L' ; ASCII 0x4C
+    CALL EUSARTsend
+    MOVLW 'O' ; ASCII 0x4F
+    CALL EUSARTsend
+    MOVLW ' ' ; ASCII 0x20
+    CALL EUSARTsend
+    MOVLW 'W' ; ASCII 0x57
+    CALL EUSARTsend
+    MOVLW 'O' ; ASCII 0x4F
+    CALL EUSARTsend
+    MOVLW 'R' ; ASCII 0x52
+    CALL EUSARTsend
+    MOVLW 'L' ; ASCII 0x4C
+    CALL EUSARTsend
+    MOVLW 'D' ; ASCII 0x44
     CALL EUSARTsend
 
     ; set the operation mode
@@ -2728,6 +2742,8 @@ EUSARTsend:
 
 ; EUSART receive
 EUSARTreceiveISR:
+
+    ; end of EUSART receive ISR
     BANKSEL PIR1
     BCF PIR1, 5 ; clear ((PIR1) and 07Fh), 5 bit
     RETURN
