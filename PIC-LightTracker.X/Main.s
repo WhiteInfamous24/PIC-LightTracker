@@ -45,7 +45,7 @@ INT_VECT:
     BTFSC   PIR1, 6		; check ADIF bit
     CALL    ADCISR
     
-    ; EUSART interruption
+    ; EUSART receive interruption
     BANKSEL PIR1
     BTFSC   PIR1, 5		; check RCIF bit
     CALL    EUSARTreceiveISR
@@ -90,6 +90,9 @@ STEP_CNTR_AUX	EQU 0x4C	; auxiliary step counter
 ; light tracker operation modes
 OP_MODE		EQU 0x50	; operation mode
 
+; EUSART
+EUSARTreceived	EQU 0x58	; data received from EUSART
+
 ; program setup
 setup:
     
@@ -124,7 +127,7 @@ setup:
     BANKSEL VRCON		; set the reference voltage
     CLRF    VRCON		; | VREN | VROE | VRR | VRSS | VR3 | VR2 | VR1 | VR0 |
     BANKSEL ADCON0		; set the ADC clock, set the input channel AN0 and turn on the ADC
-    MOVLW   0b10000001		; | ADCS1 | ADCS0 | CHS3 | CHS2 | CHS1 | CHS0 | GO/DONE | ADON |
+    MOVLW   0b01000001		; | ADCS1 | ADCS0 | CHS3 | CHS2 | CHS1 | CHS0 | GO/DONE | ADON |
     MOVWF   ADCON0
     BANKSEL ADCON1		; set reference voltage source in VDD & VSS ans justify the result to the left
     CLRF    ADCON1		; | ADFM | xx | VCFG1 | VCFG0 | xx | xx | xx | xx |
@@ -147,9 +150,9 @@ setup:
     MOVLW   0b01111000		; | GIE | PEIE | T0IE | INTE | RBIE | T0IF | INTF | RBIF |
     MOVWF   INTCON
     BANKSEL IOCB
-    MOVLW   0b11111111		; enables interruptions in <RB0:RB7>
+    MOVLW   0b11111111		; enables interrupt-on-change in <RB0:RB7>
     MOVWF   IOCB
-    BANKSEL PIE1		; enables interruptions in ADC and in EUSART receive
+    BANKSEL PIE1		; enables interruptions in ADC and EUSART receive
     MOVLW   0b01100000		; | xx | ADIE | RCIE | TXIE | SSPIE | CCP1IE | TMR2IE | TMR1IE |
     MOVWF   PIE1
     
@@ -214,35 +217,15 @@ main:
     BCF	    STATUS, 5		; clear RP0 bit
     BCF	    STATUS, 6		; clear RP1 bit
     
-    ; EUSART message check
-    MOVLW   0x0A		; ASCII new line
-    CALL    EUSARTsend
-    MOVLW   'H'			; ASCII 0x48
-    CALL    EUSARTsend
-    MOVLW   'E'			; ASCII 0x45
-    CALL    EUSARTsend
-    MOVLW   'L'			; ASCII 0x4C
-    CALL    EUSARTsend
-    MOVLW   'L'			; ASCII 0x4C
-    CALL    EUSARTsend
-    MOVLW   'O'			; ASCII 0x4F
-    CALL    EUSARTsend
-    MOVLW   ' '			; ASCII 0x20
-    CALL    EUSARTsend
-    MOVLW   'W'			; ASCII 0x57
-    CALL    EUSARTsend
-    MOVLW   'O'			; ASCII 0x4F
-    CALL    EUSARTsend
-    MOVLW   'R'			; ASCII 0x52
-    CALL    EUSARTsend
-    MOVLW   'L'			; ASCII 0x4C
-    CALL    EUSARTsend
-    MOVLW   'D'			; ASCII 0x44
-    CALL    EUSARTsend
+    ; set the operation mode from EUSART
+    MOVF    EUSARTreceived, W
+    BTFSS   STATUS, 2		; if the EUSART received data isn't ZERO load OP_MODE
+    MOVWF   OP_MODE
+    CLRF    EUSARTreceived	; clear EUSART received data
     
-    ; set the operation mode
+    ; set the operation mode from keyboard
     MOVF    KYBRD_BTN, W
-    BTFSS   STATUS, 2
+    BTFSS   STATUS, 2		; if the pressed button isn't ZERO load OP_MODE
     MOVWF   OP_MODE
     
     ; if OP_MODE is 0x03 call lightTrackerMode
@@ -284,7 +267,7 @@ main:
     GOTO    main
     
 ; EUSART transmit pre-loaded value in W
-EUSARTsend:
+EUSARTtransmit:
     BANKSEL TXREG
     MOVWF   TXREG		; load the W data into TXREG
     BANKSEL TXSTA
@@ -294,10 +277,11 @@ EUSARTsend:
 
 ; EUSART receive
 EUSARTreceiveISR:
+    BANKSEL RCREG
+    MOVF    RCREG, W
+    MOVWF   EUSARTreceived	; load the received data into EUSARTreceived
     
-    ; end of EUSART receive ISR
-    BANKSEL PIR1
-    BCF	    PIR1, 5		; clear RCIF bit
+    ; end of EUSARTreceiveISR
     RETURN
     
 ; interruption subroutine to control TMR0
@@ -343,7 +327,9 @@ ADCISR:
     BCF	    ADCON0, 3
     
     ; end of ADCISR
+    BANKSEL PIR1
     BCF	    PIR1, 6		; clear ADIF bit
+    BANKSEL ADCON0
     BSF	    ADCON0, 1		; start ADC conversion (GO/DONE)
     RETURN
 
@@ -624,10 +610,19 @@ rotUp:
     
     ; increment stepper motor position
     BTFSC   LIMIT_SW_F, 0	; if the limit switch is in HIGH, don't increment position
-    GOTO    $+4
-    INCF    MOTOR_POS_0L, F
-    BTFSC   STATUS, 0		; if there is carry, increment MOTOR_POS_0H
-    INCF    MOTOR_POS_0H, F
+    GOTO    $+7
+    MOVF    MOTOR_POS_0L, W
+    ADDLW   0x01
+    BTFSS   STATUS, 0		; if there is carry, increment MOTOR_POS_0H
+    GOTO    $+3
+    MOVF    MOTOR_POS_0H, W
+    ADDLW   0x01
+    
+    ; EUSART send information
+;    MOVF    MOTOR_POS_0H, W
+;    CALL    EUSARTtransmit
+;    MOVF    MOTOR_POS_0L, W
+;    CALL    EUSARTtransmit
     RETURN
     
 ; subroutine to rotate one step down
@@ -640,12 +635,20 @@ rotDown:
     CALL    getDelay
     
     ; decrement stepper motor position
-    BTFSC   LIMIT_SW_F, 1	; if the limit switch is in HIGH, don't increment position
-    GOTO    $+5
-    MOVF    MOTOR_POS_0L
-    BTFSC   STATUS, 2		; if it is zero, decrement MOTOR_POS_0H
-    DECF    MOTOR_POS_0H, F
-    DECF    MOTOR_POS_0L, F
+    BTFSC   LIMIT_SW_F, 1	; if the limit switch is in HIGH, don't decrement position
+    GOTO    $+7
+    MOVF    MOTOR_POS_0L, W
+    SUBLW   0x01
+    BTFSS   STATUS, 0		; if there is carry, decrement MOTOR_POS_0H
+    GOTO    $+3
+    MOVF    MOTOR_POS_0H, W
+    SUBLW   0x01
+    
+    ; EUSART send information
+;    MOVF    MOTOR_POS_0H, W
+;    CALL    EUSARTtransmit
+;    MOVF    MOTOR_POS_0L, W
+;    CALL    EUSARTtransmit
     RETURN
 
 ; subroutine to no rotation
@@ -667,10 +670,19 @@ rotLeft:
     
     ; increment stepper motor position
     BTFSC   LIMIT_SW_F, 2	; if the limit switch is in HIGH, don't increment position
-    GOTO    $+4
-    INCF    MOTOR_POS_1L, F
-    BTFSC   STATUS, 0		; if there is carry, increment MOTOR_POS_1H
-    INCF    MOTOR_POS_1H, F
+    GOTO    $+7
+    MOVF    MOTOR_POS_1L, W
+    ADDLW   0x01
+    BTFSS   STATUS, 0		; if there is carry, increment MOTOR_POS_0H
+    GOTO    $+3
+    MOVF    MOTOR_POS_1H, W
+    ADDLW   0x01
+    
+    ; EUSART send information
+;    MOVF    MOTOR_POS_0H, W
+;    CALL    EUSARTtransmit
+;    MOVF    MOTOR_POS_0L, W
+;    CALL    EUSARTtransmit
     RETURN
 
 ; rotate one step down
@@ -683,12 +695,20 @@ rotRight:
     CALL    getDelay
     
     ; decrement stepper motor position
-    BTFSC   LIMIT_SW_F, 3	; if the limit switch is in HIGH, don't increment position
-    GOTO    $+5
-    MOVF    MOTOR_POS_1L
-    BTFSC   STATUS, 2		; if it is zero, decrement MOTOR_POS_1H
-    DECF    MOTOR_POS_1H, F
-    DECF    MOTOR_POS_1L, F
+    BTFSC   LIMIT_SW_F, 3	; if the limit switch is in HIGH, don't decrement position
+    GOTO    $+7
+    MOVF    MOTOR_POS_0L, W
+    SUBLW   0x01
+    BTFSS   STATUS, 0		; if there is carry, decrement MOTOR_POS_0H
+    GOTO    $+3
+    MOVF    MOTOR_POS_0H, W
+    SUBLW   0x01
+    
+    ; EUSART send information
+;    MOVF    MOTOR_POS_0H, W
+;    CALL    EUSARTtransmit
+;    MOVF    MOTOR_POS_0L, W
+;    CALL    EUSARTtransmit
     RETURN
 
 ; no rotation
