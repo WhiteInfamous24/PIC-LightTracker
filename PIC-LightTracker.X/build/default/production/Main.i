@@ -2479,14 +2479,12 @@ INT_VECT:
     MOVWF STATUS_TMP
 
     ; keyboard/limit switchs interruption
-    BANKSEL INTCON
     BTFSS INTCON, 0 ; check ((INTCON) and 07Fh), 0 bit
     GOTO $+3
     CALL limitSwitchsISR
     CALL keyboardISR
 
     ; TMR0 interruption
-    BANKSEL INTCON
     BTFSC INTCON, 2 ; check ((INTCON) and 07Fh), 2 bit
     CALL TMR0ISR
 
@@ -2494,6 +2492,11 @@ INT_VECT:
     BANKSEL PIR1
     BTFSC PIR1, 6 ; check ((PIR1) and 07Fh), 6 bit
     CALL ADCISR
+
+    ; EUSART interruption
+    BANKSEL PIR1
+    BTFSC PIR1, 5 ; check ((PIR1) and 07Fh), 5 bit
+    CALL EUSARTreceiveISR
 
     ; return previous context
     SWAPF STATUS_TMP, W
@@ -2553,17 +2556,12 @@ setup:
     BANKSEL ANSELH
     CLRF ANSELH ; set <((ANSELH) and 07Fh), 0:((ANSELH) and 07Fh), 5> as digitals
 
-    ; PORTC configuration (USART)
-    BANKSEL TRISC
-    MOVLW 0b11000000 ; set <((PORTC) and 07Fh), 6:((PORTC) and 07Fh), 7> as inputs
-    MOVWF TRISC
-
     ; PORTD configuration (stepper motors & keyboard columns)
     BANKSEL TRISD
     CLRF TRISD ; set <((PORTD) and 07Fh), 0:((PORTD) and 07Fh), 7> as outputs
 
     ; general ports configurations
-    BANKSEL OPTION_REG ; enable global pull-ups and set pre-scaler (100=fast, 110=slow)
+    BANKSEL OPTION_REG ; enables global pull-ups and set pre-scaler (100=fast, 110=slow)
     MOVLW 0b00000100 ; | /RBPU | ((OPTION_REG) and 07Fh), 6 | ((OPTION_REG) and 07Fh), 5 | ((OPTION_REG) and 07Fh), 4 | ((OPTION_REG) and 07Fh), 3 | ((OPTION_REG) and 07Fh), 2 | ((OPTION_REG) and 07Fh), 1 | ((OPTION_REG) and 07Fh), 0 |
     MOVWF OPTION_REG
     BANKSEL WPUB
@@ -2580,24 +2578,26 @@ setup:
     CLRF ADCON1 ; | ((ADCON1) and 07Fh), 7 | xx | ((ADCON1) and 07Fh), 5 | ((ADCON1) and 07Fh), 4 | xx | xx | xx | xx |
 
     ; EUSART configuration
-    BANKSEL TXSTA
-    MOVLW 0b00100010 ; | ((TXSTA) and 07Fh), 7 | ((TXSTA) and 07Fh), 6 | ((TXSTA) and 07Fh), 5 | ((TXSTA) and 07Fh), 4 | ((TXSTA) and 07Fh), 3 | ((TXSTA) and 07Fh), 2 | ((TXSTA) and 07Fh), 1 | ((TXSTA) and 07Fh), 0 |
+    BANKSEL TXSTA ; enables transmitter, set asynchronous mode and high speed
+    MOVLW 0b00100110 ; | ((TXSTA) and 07Fh), 7 | ((TXSTA) and 07Fh), 6 | ((TXSTA) and 07Fh), 5 | ((TXSTA) and 07Fh), 4 | ((TXSTA) and 07Fh), 3 | ((TXSTA) and 07Fh), 2 | ((TXSTA) and 07Fh), 1 | ((TXSTA) and 07Fh), 0 |
     MOVWF TXSTA
-    BANKSEL RCSTA
+    BANKSEL RCSTA ; enables serial port, enables receiver
     MOVLW 0b10010000 ; | ((RCSTA) and 07Fh), 7 | ((RCSTA) and 07Fh), 6 | ((RCSTA) and 07Fh), 5 | ((RCSTA) and 07Fh), 4 | ((RCSTA) and 07Fh), 3 | ((RCSTA) and 07Fh), 2 | ((RCSTA) and 07Fh), 1 | ((RCSTA) and 07Fh), 0 |
     MOVWF RCSTA
     BANKSEL SPBRG
-    MOVLW 0xCF ; set the baud rate generator
+    MOVLW 0x19 ; set the baud rate generator
     MOVWF SPBRG
+    BANKSEL SPBRGH ; clear SPBRGH
+    CLRF SPBRGH
 
     ; interruptions configuration
-    BANKSEL INTCON ; enable interruptions in ((INTCON) and 07Fh), 6, interruptions in TMR0 and interruptions in PORTC
+    BANKSEL INTCON ; enables interruptions in ((INTCON) and 07Fh), 6, interruptions in TMR0 and interruptions in PORTC
     MOVLW 0b01111000 ; | ((INTCON) and 07Fh), 7 | ((INTCON) and 07Fh), 6 | ((INTCON) and 07Fh), 5 | ((INTCON) and 07Fh), 4 | ((INTCON) and 07Fh), 3 | ((INTCON) and 07Fh), 2 | ((INTCON) and 07Fh), 1 | ((INTCON) and 07Fh), 0 |
     MOVWF INTCON
     BANKSEL IOCB
-    MOVLW 0b11111111 ; enable interruptions in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
+    MOVLW 0b11111111 ; enables interruptions in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
     MOVWF IOCB
-    BANKSEL PIE1 ; enable interruptions in ADC and in EUSART receive
+    BANKSEL PIE1 ; enables interruptions in ADC and in EUSART receive
     MOVLW 0b01100000 ; | xx | ((PIE1) and 07Fh), 6 | ((PIE1) and 07Fh), 5 | ((PIE1) and 07Fh), 4 | ((PIE1) and 07Fh), 3 | ((PIE1) and 07Fh), 2 | ((PIE1) and 07Fh), 1 | ((PIE1) and 07Fh), 0 |
     MOVWF PIE1
 
@@ -2622,14 +2622,18 @@ setup:
     BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
 
     ; variables initialization
-    MOVLW AN0_VALUE ; starting register to store <AN0:AN3> values
+    MOVLW AN0_VALUE ; set starting register to store <AN0:AN3> values
     MOVWF ADC_PORT_IT
-    MOVLW 0b11110000 ; sensibility range value
+    MOVLW 0b11110000 ; set sensibility range value
     MOVWF SNSBLTY_RANGE
-    CLRF KYBRD_BTN
-    CLRF KYBRD_F
-    CLRF LIMIT_SW_F
-    CLRF OP_MODE
+    CLRF KYBRD_BTN ; clear register
+    CLRF KYBRD_F ; clear register
+    CLRF LIMIT_SW_F ; clear register
+    CLRF MOTOR_POS_0L ; clear register
+    CLRF MOTOR_POS_0H ; clear register
+    CLRF MOTOR_POS_1L ; clear register
+    CLRF MOTOR_POS_1H ; clear register
+    CLRF OP_MODE ; clear register
 
     ; axis recognition sequence
 ; CALL moveUpToLimitSw
@@ -2659,13 +2663,15 @@ main:
     BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
 
     ; EUSART message check
-    MOVLW 0x48 ; ASCII 'H'
+    MOVLW 0x0A ; ASCII new line
     CALL EUSARTsend
-    MOVLW 0x4F ; ASCII 'O'
+    MOVLW 'H' ; ASCII 0x48
     CALL EUSARTsend
-    MOVLW 0x4C ; ASCII 'L'
+    MOVLW 'O' ; ASCII 0x4F
     CALL EUSARTsend
-    MOVLW 0x41 ; ASCII 'A'
+    MOVLW 'L' ; ASCII 0x4C
+    CALL EUSARTsend
+    MOVLW 'A' ; ASCII 0x41
     CALL EUSARTsend
 
     ; set the operation mode
@@ -2716,12 +2722,14 @@ EUSARTsend:
     BANKSEL TXREG
     MOVWF TXREG ; load the W data into TXREG
     BANKSEL TXSTA
-    BTFSC TXSTA, 1 ; check if the data has been sent
+    BTFSS TXSTA, 1 ; check if the data has been sent
     GOTO $-1 ; loop until the data has been sent
     RETURN
 
 ; EUSART receive
 EUSARTreceiveISR:
+    BANKSEL PIR1
+    BCF PIR1, 5 ; clear ((PIR1) and 07Fh), 5 bit
     RETURN
 
 ; interruption subroutine to control TMR0
@@ -2730,6 +2738,8 @@ TMR0ISR:
     MOVLW 0b00000000 ; reset TMR0
     MOVWF TMR0
     INCF TMR0_CNTR, F ; increment TMR0 counter variable
+
+    ; end of TMR0ISR
     BCF INTCON, 2 ; clear ((INTCON) and 07Fh), 2 bit
     RETURN
 
