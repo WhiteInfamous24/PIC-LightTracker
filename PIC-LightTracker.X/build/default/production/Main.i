@@ -2576,7 +2576,7 @@ setup:
     BANKSEL VRCON ; set the reference voltage
     CLRF VRCON ; | ((VRCON) and 07Fh), 7 | ((VRCON) and 07Fh), 6 | ((VRCON) and 07Fh), 5 | ((VRCON) and 07Fh), 4 | ((VRCON) and 07Fh), 3 | ((VRCON) and 07Fh), 2 | ((VRCON) and 07Fh), 1 | ((VRCON) and 07Fh), 0 |
     BANKSEL ADCON0 ; set the ADC clock, set the input channel AN0 and turn on the ADC
-    MOVLW 0b01000001 ; | ((ADCON0) and 07Fh), 7 | ((ADCON0) and 07Fh), 6 | ((ADCON0) and 07Fh), 5 | ((ADCON0) and 07Fh), 4 | ((ADCON0) and 07Fh), 3 | ((ADCON0) and 07Fh), 2 | ((ADCON0) and 07Fh), 1/DONE | ((ADCON0) and 07Fh), 0 |
+    MOVLW 0b10000001 ; | ((ADCON0) and 07Fh), 7 | ((ADCON0) and 07Fh), 6 | ((ADCON0) and 07Fh), 5 | ((ADCON0) and 07Fh), 4 | ((ADCON0) and 07Fh), 3 | ((ADCON0) and 07Fh), 2 | ((ADCON0) and 07Fh), 1/DONE | ((ADCON0) and 07Fh), 0 |
     MOVWF ADCON0
     BANKSEL ADCON1 ; set reference voltage source in VDD & VSS ans justify the result to the left
     CLRF ADCON1 ; | ((ADCON1) and 07Fh), 7 | xx | ((ADCON1) and 07Fh), 5 | ((ADCON1) and 07Fh), 4 | xx | xx | xx | xx |
@@ -2621,11 +2621,8 @@ setup:
     BANKSEL INTCON
     BSF INTCON, 7 ; enable global interruptions
 
-    ; select memory bank 0 <00>
-    BCF STATUS, 5 ; clear ((STATUS) and 07Fh), 5 bit
-    BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
-
     ; variables initialization
+    CALL setBANK_0
     MOVLW AN0_VALUE ; set starting register to store <AN0:AN3> values
     MOVWF ADC_PORT_IT
     MOVLW 0b11110000 ; set sensibility range value
@@ -2661,10 +2658,6 @@ setup:
 
 ; main program loop
 main:
-
-    ; select memory bank 0 <00>
-    BCF STATUS, 5 ; clear ((STATUS) and 07Fh), 5 bit
-    BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
 
     ; set the operation mode from EUSART
     MOVF EUSARTreceived, W
@@ -2726,6 +2719,7 @@ EUSARTtransmit:
 
     ; end of EUSARTtransmit
     BSF INTCON, 7 ; set ((INTCON) and 07Fh), 7 bit
+    CALL setBANK_0
     RETURN
 
 ; EUSART receive
@@ -2820,10 +2814,6 @@ limitSwitchsISR:
 
 ; interruption subroutine to get pressed button in keyboard
 keyboardISR:
-
-    ; select memory bank 0 <00>
-    BCF STATUS, 5 ; clear ((STATUS) and 07Fh), 5 bit
-    BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
 
     ; clear previous pressed button and found flag
     CLRF KYBRD_BTN
@@ -2921,10 +2911,6 @@ searchInRow:
 ; subroutine to convert a value in W by performing additions based on bit positions
 kybrdToHexConv:
 
-    ; select memory bank 0 <00>
-    BCF STATUS, 5 ; clear ((STATUS) and 07Fh), 5 bit
-    BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
-
     ; clear W
     CLRW
 
@@ -3017,7 +3003,7 @@ lightTrackerMode:
     ANDWF SNSBLTY_RANGE, W ; apply sensibility value
 
     ; rotate up or down if necessary
-    BTFSC STATUS, 2 ; if the result is zero, do nothing
+    BTFSC STATUS, 2 ; if the result is ((STATUS) and 07Fh), 2, do nothing
     GOTO $+9
     BTFSC STATUS, 0 ; if the result is negative, rotate up
     GOTO $+3
@@ -3037,7 +3023,7 @@ lightTrackerMode:
     ANDWF SNSBLTY_RANGE, W ; apply sensibility value
 
     ; rotate left or right if necessary
-    BTFSC STATUS, 2 ; if the result is zero, do nothing
+    BTFSC STATUS, 2 ; if the result is ((STATUS) and 07Fh), 2, do nothing
     GOTO $+9
     BTFSC STATUS, 0 ; if the result is negative, rotate left
     GOTO $+3
@@ -3055,7 +3041,7 @@ lightTrackerMode:
 ; subroutine to rotate one step up
 rotUp:
     BCF PORTD, 0 ; set direction (((PORTD) and 07Fh), 0) in LOW
-    BTFSS LIMIT_SW_F, 0 ; if the limit switch is in HIGH, dont send pulse
+    BTFSS LIMIT_SW_F, 0 ; if the limit switch is in HIGH, don't send pulse
     BSF PORTD, 1 ; set pulse (((PORTD) and 07Fh), 1) in HIGH
     CALL getDelay
     BCF PORTD, 1 ; set pulse (((PORTD) and 07Fh), 1) in LOW
@@ -3066,7 +3052,7 @@ rotUp:
     GOTO $+8
     MOVLW 0x01
     ADDWF MOTOR_POS_0L, F
-    BTFSS STATUS, 0 ; if there is carry, increment MOTOR_POS_0H
+    BTFSS STATUS, 0 ; if there is ((STATUS) and 07Fh), 0, increment MOTOR_POS_0H
     GOTO $+3
     MOVLW 0x01
     ADDWF MOTOR_POS_0H, F
@@ -3078,7 +3064,7 @@ rotUp:
 ; subroutine to rotate one step down
 rotDown:
     BSF PORTD, 0 ; set direction (((PORTD) and 07Fh), 0) in HIGH
-    BTFSS LIMIT_SW_F, 1 ; if the limit switch is in HIGH, dont send pulse
+    BTFSS LIMIT_SW_F, 1 ; if the limit switch is in HIGH, don't send pulse
     BSF PORTD, 1 ; set pulse (((PORTD) and 07Fh), 1) in HIGH
     CALL getDelay
     BCF PORTD, 1 ; set pulse (((PORTD) and 07Fh), 1) in LOW
@@ -3088,7 +3074,7 @@ rotDown:
     BTFSC LIMIT_SW_F, 1 ; if the limit switch is in HIGH, don't decrement position
     GOTO $+6
     MOVF MOTOR_POS_0L, W
-    BTFSC STATUS, 2 ; if it's zero, decrement MOTOR_POS_0H
+    BTFSC STATUS, 2 ; if it's ZERO, decrement MOTOR_POS_0H
     DECF MOTOR_POS_0H, F
     DECF MOTOR_POS_0L, F
 
@@ -3107,7 +3093,7 @@ stopRotUD:
 ; rotate one step up
 rotLeft:
     BCF PORTD, 2 ; set direction (((PORTD) and 07Fh), 2) in LOW
-    BTFSS LIMIT_SW_F, 2 ; if the limit switch is in HIGH, dont send pulse
+    BTFSS LIMIT_SW_F, 2 ; if the limit switch is in HIGH, don't send pulse
     BSF PORTD, 3 ; set pulse (((PORTD) and 07Fh), 3) in HIGH
     CALL getDelay
     BCF PORTD, 3 ; set pulse (((PORTD) and 07Fh), 3) in LOW
@@ -3118,7 +3104,7 @@ rotLeft:
     GOTO $+8
     MOVLW 0x01
     ADDWF MOTOR_POS_1L, F
-    BTFSS STATUS, 0 ; if there is carry, increment MOTOR_POS_0H
+    BTFSS STATUS, 0 ; if there is ((STATUS) and 07Fh), 0, increment MOTOR_POS_0H
     GOTO $+3
     MOVLW 0x01
     ADDWF MOTOR_POS_1H, F
@@ -3130,7 +3116,7 @@ rotLeft:
 ; rotate one step down
 rotRight:
     BSF PORTD, 2 ; set direction (((PORTD) and 07Fh), 2) in HIGH
-    BTFSS LIMIT_SW_F, 3 ; if the limit switch is in HIGH, dont send pulse
+    BTFSS LIMIT_SW_F, 3 ; if the limit switch is in HIGH, don't send pulse
     BSF PORTD, 3 ; set pulse (((PORTD) and 07Fh), 3) in HIGH
     CALL getDelay
     BCF PORTD, 3 ; set pulse (((PORTD) and 07Fh), 3) in LOW
@@ -3140,7 +3126,7 @@ rotRight:
     BTFSC LIMIT_SW_F, 3 ; if the limit switch is in HIGH, don't decrement position
     GOTO $+6
     MOVF MOTOR_POS_1L, W
-    BTFSC STATUS, 2 ; if it's zero, decrement MOTOR_POS_0H
+    BTFSC STATUS, 2 ; if it's ZERO, decrement MOTOR_POS_0H
     DECF MOTOR_POS_1H, F
     DECF MOTOR_POS_1L, F
 
@@ -3174,47 +3160,49 @@ getDelay:
 transmitPosition:
 
     ; transmit new line
-    MOVLW 0x0A ; ASCII new line
+    MOVLW 0x0D
+    CALL EUSARTtransmit
+    MOVLW 0x0A
     CALL EUSARTtransmit
 
     ; transmit high nibble from motor 0 position high
     MOVF MOTOR_POS_0H, W
-    CALL hexToASCIIhighConv
+    ;CALL hexToASCIIhighConv
     CALL EUSARTtransmit
 
     ; transmit low nibble from motor 0 position high
     MOVF MOTOR_POS_0H, W
-    CALL hexToASCIIlowConv
+    ;CALL hexToASCIIlowConv
     CALL EUSARTtransmit
 
     ; transmit high nibble from motor 0 position low
     MOVF MOTOR_POS_0L, W
-    CALL hexToASCIIhighConv
+    ;CALL hexToASCIIhighConv
     CALL EUSARTtransmit
 
     ; transmit low nibble from motor 0 position low
     MOVF MOTOR_POS_0L, W
-    CALL hexToASCIIlowConv
+    ;CALL hexToASCIIlowConv
     CALL EUSARTtransmit
 
     ; transmit high nibble from motor 1 position high
     MOVF MOTOR_POS_1H, W
-    CALL hexToASCIIhighConv
+    ;CALL hexToASCIIhighConv
     CALL EUSARTtransmit
 
     ; transmit low nibble from motor 1 position high
     MOVF MOTOR_POS_1H, W
-    CALL hexToASCIIlowConv
+    ;CALL hexToASCIIlowConv
     CALL EUSARTtransmit
 
     ; transmit high nibble from motor 1 position low
     MOVF MOTOR_POS_1L, W
-    CALL hexToASCIIhighConv
+    ;CALL hexToASCIIhighConv
     CALL EUSARTtransmit
 
     ; transmit low nibble from motor 1 position low
     MOVF MOTOR_POS_1L, W
-    CALL hexToASCIIlowConv
+    ;CALL hexToASCIIlowConv
     CALL EUSARTtransmit
     RETURN
 
@@ -3250,6 +3238,12 @@ hexToASCIIhighConv:
     SWAPF VAR_TMP, W
     ANDLW 0b00001111
     CALL hexToASCIItable
+    RETURN
+
+; set memory bank 0
+setBANK_0:
+    BCF STATUS, 5 ; clear ((STATUS) and 07Fh), 5 bit
+    BCF STATUS, 6 ; clear ((STATUS) and 07Fh), 6 bit
     RETURN
 
 END RESET_VECT
