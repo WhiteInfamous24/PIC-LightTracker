@@ -2565,8 +2565,8 @@ setup:
     CLRF TRISD ; set <((PORTD) and 07Fh), 0:((PORTD) and 07Fh), 7> as outputs
 
     ; general ports configurations
-    BANKSEL OPTION_REG ; enables global pull-ups and set pre-scaler (011=fast, 110=slow)
-    MOVLW 0b00000011 ; | /RBPU | ((OPTION_REG) and 07Fh), 6 | ((OPTION_REG) and 07Fh), 5 | ((OPTION_REG) and 07Fh), 4 | ((OPTION_REG) and 07Fh), 3 | ((OPTION_REG) and 07Fh), 2 | ((OPTION_REG) and 07Fh), 1 | ((OPTION_REG) and 07Fh), 0 |
+    BANKSEL OPTION_REG ; enables global pull-ups and set pre-scaler (100=fast, 110=slow)
+    MOVLW 0b00000100 ; | /RBPU | ((OPTION_REG) and 07Fh), 6 | ((OPTION_REG) and 07Fh), 5 | ((OPTION_REG) and 07Fh), 4 | ((OPTION_REG) and 07Fh), 3 | ((OPTION_REG) and 07Fh), 2 | ((OPTION_REG) and 07Fh), 1 | ((OPTION_REG) and 07Fh), 0 |
     MOVWF OPTION_REG
     BANKSEL WPUB
     MOVLW 0b11111111 ; enable pull-ups in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
@@ -2710,13 +2710,15 @@ main:
 
 ; EUSART transmit pre-loaded value in W
 EUSARTtransmit:
+    BCF INTCON, 7 ; clear ((INTCON) and 07Fh), 7 bit to prevent interruptions
     BANKSEL TXREG
     MOVWF TXREG ; load the W data into TXREG
     BANKSEL TXSTA
-    BTFSC TXSTA, 1 ; check if the data has been sent
+    BTFSS TXSTA, 1 ; check if the data has been sent
     GOTO $-1 ; loop until the data has been sent
 
     ; end of EUSARTtransmit
+    BSF INTCON, 7 ; set ((INTCON) and 07Fh), 7 bit to resume interruptions
     CALL setBANK_0
     RETURN
 
@@ -3175,45 +3177,52 @@ transmitPosition:
     MOVLW 0x0A
     CALL EUSARTtransmit
 
+    MOVLW 0x24
+    CALL hexToASCIIhighConv
+    CALL EUSARTtransmit
+    MOVLW 0x24
+    CALL hexToASCIIlowConv
+    CALL EUSARTtransmit
+
     ; transmit high nibble from motor 0 position high
-    ;MOVF MOTOR_POS_0H, W
-    ;CALL hexToASCIIhighConv
-    ;CALL EUSARTtransmit
+; MOVF MOTOR_POS_0H, W
+; CALL hexToASCIIhighConv
+; CALL EUSARTtransmit
 
     ; transmit low nibble from motor 0 position high
-    MOVF MOTOR_POS_0H, W
-    ;CALL hexToASCIIlowConv
-    CALL EUSARTtransmit
+; MOVF MOTOR_POS_0H, W
+; CALL hexToASCIIlowConv
+; CALL EUSARTtransmit
 
     ; transmit high nibble from motor 0 position low
-    ;MOVF MOTOR_POS_0L, W
-    ;CALL hexToASCIIhighConv
-    ;CALL EUSARTtransmit
+; MOVF MOTOR_POS_0L, W
+; CALL hexToASCIIhighConv
+; CALL EUSARTtransmit
 
     ; transmit low nibble from motor 0 position low
-    MOVF MOTOR_POS_0L, W
-    ;CALL hexToASCIIlowConv
-    CALL EUSARTtransmit
+; MOVF MOTOR_POS_0L, W
+; CALL hexToASCIIlowConv
+; CALL EUSARTtransmit
 
     ; transmit high nibble from motor 1 position high
-    ;MOVF MOTOR_POS_1H, W
-    ;CALL hexToASCIIhighConv
-    ;CALL EUSARTtransmit
+; MOVF MOTOR_POS_1H, W
+; CALL hexToASCIIhighConv
+; CALL EUSARTtransmit
 
     ; transmit low nibble from motor 1 position high
-    MOVF MOTOR_POS_1H, W
-    ;CALL hexToASCIIlowConv
-    CALL EUSARTtransmit
+; MOVF MOTOR_POS_1H, W
+; CALL hexToASCIIlowConv
+; CALL EUSARTtransmit
 
     ; transmit high nibble from motor 1 position low
-    ;MOVF MOTOR_POS_1L, W
-    ;CALL hexToASCIIhighConv
-    ;CALL EUSARTtransmit
+; MOVF MOTOR_POS_1L, W
+; CALL hexToASCIIhighConv
+; CALL EUSARTtransmit
 
     ; transmit low nibble from motor 1 position low
-    MOVF MOTOR_POS_1L, W
-    ;CALL hexToASCIIlowConv
-    CALL EUSARTtransmit
+; MOVF MOTOR_POS_1L, W
+; CALL hexToASCIIlowConv
+; CALL EUSARTtransmit
     RETURN
 
 ; table to convert a W value from hexadecimal to ASCII
