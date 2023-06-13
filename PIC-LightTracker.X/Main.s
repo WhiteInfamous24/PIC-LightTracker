@@ -191,24 +191,24 @@ setup:
     CLRF    OP_MODE		; clear register
     
     ; axis recognition sequence
+    CALL    moveDownToLimitSw
+    CALL    getDelay
 ;    CALL    moveUpToLimitSw
 ;    CALL    getDelay
-;    CALL    moveDownToLimitSw
-;    CALL    getDelay
-;    MOVLW   0xAC
-;    MOVWF   STEP_CNTR_AUX
-;    CALL    rotUp
-;    DECFSZ  STEP_CNTR_AUX
-;    GOTO    $-2
+    MOVLW   0xAC
+    MOVWF   STEP_CNTR_AUX
+    CALL    rotUp
+    DECFSZ  STEP_CNTR_AUX
+    GOTO    $-2
+    CALL    moveRightToLimitSw
+    CALL    getDelay
 ;    CALL    moveLeftToLimitSw
 ;    CALL    getDelay
-;    CALL    moveRightToLimitSw
-;    CALL    getDelay
-;    MOVLW   0xD0
-;    MOVWF   STEP_CNTR_AUX
-;    CALL    rotLeft
-;    DECFSZ  STEP_CNTR_AUX
-;    GOTO    $-2
+    MOVLW   0xD0
+    MOVWF   STEP_CNTR_AUX
+    CALL    rotLeft
+    DECFSZ  STEP_CNTR_AUX
+    GOTO    $-2
 
 ; main program loop
 main:
@@ -268,11 +268,15 @@ main:
     
 ; EUSART transmit pre-loaded value in W
 EUSARTtransmit:
+    BCF	    INTCON, 7		; clear GIE bit
     BANKSEL TXREG
     MOVWF   TXREG		; load the W data into TXREG
     BANKSEL TXSTA
     BTFSS   TXSTA, 1		; check if the data has been sent
     GOTO    $-1			; loop until the data has been sent
+    
+    ; end of EUSARTtransmitISR
+    BSF	    INTCON, 7		; set GIE bit
     RETURN
 
 ; EUSART receive
@@ -524,10 +528,6 @@ moveUpToLimitSw:
     CALL    rotUp
     BTFSS   LIMIT_SW_F, 0
     GOTO    $-2
-    
-    ; set the zero position of the stepper motor
-    CLRF    MOTOR_POS_0L
-    CLRF    MOTOR_POS_0H
     RETURN
     
 ; subroutine to move the stepper motor down to the limit switch
@@ -535,6 +535,10 @@ moveDownToLimitSw:
     CALL    rotDown
     BTFSS   LIMIT_SW_F, 1
     GOTO    $-2
+    
+    ; set the zero position of the stepper motor
+    CLRF    MOTOR_POS_0L
+    CLRF    MOTOR_POS_0H
     RETURN
     
 ; subroutine to move the stepper motor left to the limit switch
@@ -542,10 +546,6 @@ moveLeftToLimitSw:
     CALL    rotLeft
     BTFSS   LIMIT_SW_F, 2
     GOTO    $-2
-    
-    ; set the zero position of the stepper motor
-    CLRF    MOTOR_POS_1L
-    CLRF    MOTOR_POS_1H
     RETURN
     
 ; subroutine to move the stepper motor right to the limit switch
@@ -553,6 +553,10 @@ moveRightToLimitSw:
     CALL    rotRight
     BTFSS   LIMIT_SW_F, 3
     GOTO    $-2
+    
+    ; set the zero position of the stepper motor
+    CLRF    MOTOR_POS_1L
+    CLRF    MOTOR_POS_1H
     RETURN
     
 ; subroutine to move the light tracker using light
@@ -611,18 +615,15 @@ rotUp:
     ; increment stepper motor position
     BTFSC   LIMIT_SW_F, 0	; if the limit switch is in HIGH, don't increment position
     GOTO    $+7
-    MOVF    MOTOR_POS_0L, W
-    ADDLW   0x01
+    MOVLW   0x01
+    ADDWF   MOTOR_POS_0L, F
     BTFSS   STATUS, 0		; if there is carry, increment MOTOR_POS_0H
     GOTO    $+3
-    MOVF    MOTOR_POS_0H, W
-    ADDLW   0x01
+    MOVLW   0x01
+    ADDWF   MOTOR_POS_0H, F
     
-    ; EUSART send information
-;    MOVF    MOTOR_POS_0H, W
-;    CALL    EUSARTtransmit
-;    MOVF    MOTOR_POS_0L, W
-;    CALL    EUSARTtransmit
+    ; EUSART transmit information
+    CALL    transmitPosition
     RETURN
     
 ; subroutine to rotate one step down
@@ -636,19 +637,14 @@ rotDown:
     
     ; decrement stepper motor position
     BTFSC   LIMIT_SW_F, 1	; if the limit switch is in HIGH, don't decrement position
-    GOTO    $+7
+    GOTO    $+5
     MOVF    MOTOR_POS_0L, W
-    SUBLW   0x01
-    BTFSS   STATUS, 0		; if there is carry, decrement MOTOR_POS_0H
-    GOTO    $+3
-    MOVF    MOTOR_POS_0H, W
-    SUBLW   0x01
+    BTFSC   STATUS, 2		; if it's zero, decrement MOTOR_POS_0H
+    DECF    MOTOR_POS_0H, F
+    DECF    MOTOR_POS_0L, F
     
-    ; EUSART send information
-;    MOVF    MOTOR_POS_0H, W
-;    CALL    EUSARTtransmit
-;    MOVF    MOTOR_POS_0L, W
-;    CALL    EUSARTtransmit
+    ; EUSART transmit information
+    CALL    transmitPosition
     RETURN
 
 ; subroutine to no rotation
@@ -671,18 +667,15 @@ rotLeft:
     ; increment stepper motor position
     BTFSC   LIMIT_SW_F, 2	; if the limit switch is in HIGH, don't increment position
     GOTO    $+7
-    MOVF    MOTOR_POS_1L, W
-    ADDLW   0x01
+    MOVLW   0x01
+    ADDWF   MOTOR_POS_1L, F
     BTFSS   STATUS, 0		; if there is carry, increment MOTOR_POS_0H
     GOTO    $+3
-    MOVF    MOTOR_POS_1H, W
-    ADDLW   0x01
+    MOVLW   0x01
+    ADDWF   MOTOR_POS_1H, F
     
-    ; EUSART send information
-;    MOVF    MOTOR_POS_0H, W
-;    CALL    EUSARTtransmit
-;    MOVF    MOTOR_POS_0L, W
-;    CALL    EUSARTtransmit
+    ; EUSART transmit information
+    CALL    transmitPosition
     RETURN
 
 ; rotate one step down
@@ -696,19 +689,14 @@ rotRight:
     
     ; decrement stepper motor position
     BTFSC   LIMIT_SW_F, 3	; if the limit switch is in HIGH, don't decrement position
-    GOTO    $+7
-    MOVF    MOTOR_POS_0L, W
-    SUBLW   0x01
-    BTFSS   STATUS, 0		; if there is carry, decrement MOTOR_POS_0H
-    GOTO    $+3
-    MOVF    MOTOR_POS_0H, W
-    SUBLW   0x01
+    GOTO    $+5
+    MOVF    MOTOR_POS_1L, W
+    BTFSC   STATUS, 2		; if it's zero, decrement MOTOR_POS_0H
+    DECF    MOTOR_POS_1H, F
+    DECF    MOTOR_POS_1L, F
     
-    ; EUSART send information
-;    MOVF    MOTOR_POS_0H, W
-;    CALL    EUSARTtransmit
-;    MOVF    MOTOR_POS_0L, W
-;    CALL    EUSARTtransmit
+    ; EUSART transmit information
+    CALL    transmitPosition
     RETURN
 
 ; no rotation
@@ -731,6 +719,18 @@ getDelay:
     SUBWF   TMR0_CNTR_REF, W
     BTFSC   STATUS, 2
     GOTO    $-3
+    RETURN
+    
+; EUSART transmit position information
+transmitPosition:
+    MOVF    MOTOR_POS_0H, W
+    CALL    EUSARTtransmit
+    MOVF    MOTOR_POS_0L, W
+    CALL    EUSARTtransmit
+    MOVF    MOTOR_POS_1H, W
+    CALL    EUSARTtransmit
+    MOVF    MOTOR_POS_1L, W
+    CALL    EUSARTtransmit
     RETURN
 
 END RESET_VECT
