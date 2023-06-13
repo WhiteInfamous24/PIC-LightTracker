@@ -60,6 +60,7 @@ INT_VECT:
 ; interruptions context variables
 W_TMP		EQU 0x20	; temporary W
 STATUS_TMP	EQU 0x21	; temporary STATUS
+VAR_TMP		EQU 0x22	; temporary general purpose register
 
 ; timer 0
 TMR0_CNTR	EQU 0x28	; TMR0 counter
@@ -116,8 +117,8 @@ setup:
     CLRF    TRISD		; set <RD0:RD7> as outputs
     
     ; general ports configurations
-    BANKSEL OPTION_REG		; enables global pull-ups and set pre-scaler (100=fast, 110=slow) 
-    MOVLW   0b00000100		; | /RBPU | INTEDG | T0CS | T0SE | PSA | PS2 | PS1 | PS0 |
+    BANKSEL OPTION_REG		; enables global pull-ups and set pre-scaler (011=fast, 110=slow) 
+    MOVLW   0b00000011		; | /RBPU | INTEDG | T0CS | T0SE | PSA | PS2 | PS1 | PS0 |
     MOVWF   OPTION_REG
     BANKSEL WPUB
     MOVLW   0b11111111		; enable pull-ups in <RB0:RB7>
@@ -275,7 +276,7 @@ EUSARTtransmit:
     BTFSS   TXSTA, 1		; check if the data has been sent
     GOTO    $-1			; loop until the data has been sent
     
-    ; end of EUSARTtransmitISR
+    ; end of EUSARTtransmit
     BSF	    INTCON, 7		; set GIE bit
     RETURN
 
@@ -614,7 +615,7 @@ rotUp:
     
     ; increment stepper motor position
     BTFSC   LIMIT_SW_F, 0	; if the limit switch is in HIGH, don't increment position
-    GOTO    $+7
+    GOTO    $+8
     MOVLW   0x01
     ADDWF   MOTOR_POS_0L, F
     BTFSS   STATUS, 0		; if there is carry, increment MOTOR_POS_0H
@@ -637,7 +638,7 @@ rotDown:
     
     ; decrement stepper motor position
     BTFSC   LIMIT_SW_F, 1	; if the limit switch is in HIGH, don't decrement position
-    GOTO    $+5
+    GOTO    $+6
     MOVF    MOTOR_POS_0L, W
     BTFSC   STATUS, 2		; if it's zero, decrement MOTOR_POS_0H
     DECF    MOTOR_POS_0H, F
@@ -666,7 +667,7 @@ rotLeft:
     
     ; increment stepper motor position
     BTFSC   LIMIT_SW_F, 2	; if the limit switch is in HIGH, don't increment position
-    GOTO    $+7
+    GOTO    $+8
     MOVLW   0x01
     ADDWF   MOTOR_POS_1L, F
     BTFSS   STATUS, 0		; if there is carry, increment MOTOR_POS_0H
@@ -689,7 +690,7 @@ rotRight:
     
     ; decrement stepper motor position
     BTFSC   LIMIT_SW_F, 3	; if the limit switch is in HIGH, don't decrement position
-    GOTO    $+5
+    GOTO    $+6
     MOVF    MOTOR_POS_1L, W
     BTFSC   STATUS, 2		; if it's zero, decrement MOTOR_POS_0H
     DECF    MOTOR_POS_1H, F
@@ -723,14 +724,84 @@ getDelay:
     
 ; EUSART transmit position information
 transmitPosition:
+    
+    ; transmit new line
+    MOVLW   0x0A		; ASCII new line
+    CALL    EUSARTtransmit
+    
+    ; transmit high nibble from motor 0 position high
     MOVF    MOTOR_POS_0H, W
+    CALL    hexToASCIIhighConv
     CALL    EUSARTtransmit
+    
+    ; transmit low nibble from motor 0 position high
+    MOVF    MOTOR_POS_0H, W
+    CALL    hexToASCIIlowConv
+    CALL    EUSARTtransmit
+    
+    ; transmit high nibble from motor 0 position low
     MOVF    MOTOR_POS_0L, W
+    CALL    hexToASCIIhighConv
     CALL    EUSARTtransmit
+    
+    ; transmit low nibble from motor 0 position low
+    MOVF    MOTOR_POS_0L, W
+    CALL    hexToASCIIlowConv
+    CALL    EUSARTtransmit
+    
+    ; transmit high nibble from motor 1 position high
     MOVF    MOTOR_POS_1H, W
+    CALL    hexToASCIIhighConv
     CALL    EUSARTtransmit
+    
+    ; transmit low nibble from motor 1 position high
+    MOVF    MOTOR_POS_1H, W
+    CALL    hexToASCIIlowConv
+    CALL    EUSARTtransmit
+    
+    ; transmit high nibble from motor 1 position low
     MOVF    MOTOR_POS_1L, W
+    CALL    hexToASCIIhighConv
     CALL    EUSARTtransmit
+    
+    ; transmit low nibble from motor 1 position low
+    MOVF    MOTOR_POS_1L, W
+    CALL    hexToASCIIlowConv
+    CALL    EUSARTtransmit
+    RETURN
+    
+; table to convert a W value from hexadecimal to ASCII
+hexToASCIItable:
+    ADDWF   PCL, F
+    RETLW   0x30		; ASCII '0'
+    RETLW   0x31		; ASCII '1'
+    RETLW   0x32		; ASCII '2'
+    RETLW   0x33		; ASCII '3'
+    RETLW   0x34		; ASCII '4'
+    RETLW   0x35		; ASCII '5'
+    RETLW   0x36		; ASCII '6'
+    RETLW   0x37		; ASCII '7'
+    RETLW   0x38		; ASCII '8'
+    RETLW   0x39		; ASCII '9'
+    RETLW   0x41		; ASCII 'A'
+    RETLW   0x42		; ASCII 'B'
+    RETLW   0x43		; ASCII 'C'
+    RETLW   0x44		; ASCII 'D'
+    RETLW   0x45		; ASCII 'E'
+    RETLW   0x46		; ASCII 'F'
+    
+; convert the low nibble of W from hexadecimal to ASCII
+hexToASCIIlowConv:
+    ANDLW   0b00001111
+    CALL    hexToASCIItable
+    RETURN
+    
+; convert the high nibble of W from hexadecimal to ASCII
+hexToASCIIhighConv:
+    MOVWF   VAR_TMP
+    SWAPF   VAR_TMP, W
+    ANDLW   0b00001111
+    CALL    hexToASCIItable
     RETURN
 
 END RESET_VECT
