@@ -11,7 +11,7 @@
 # All addresses and the length are given in unqualified hexadecimal
 # in delta units.  Any other numeric values are decimal.
 %PSECTS
-$build/default/production/Main.o
+$build/default/debug/Main.o
 RESET_VECT CODE 0 0 0 1 2 1
 INT_VECT CODE 0 4 4 1F1 2 1
 config CONFIG 4 2007 2007 2 2 1
@@ -56,7 +56,7 @@ STRING 1F5-1FFF 2
 # are in ascending order of addresses.
 # All other numeric values are in decimal.
 %LINETAB
-$build/default/production/Main.o
+$build/default/debug/Main.o
 4 INT_VECT CODE >29:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
 5 INT_VECT CODE >30:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s
 6 INT_VECT CODE >31:D:\Documents\GitHub\PIC-LightTracker\PIC-LightTracker.X\Main.s

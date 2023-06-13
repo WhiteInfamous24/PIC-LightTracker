@@ -39,7 +39,7 @@ __Ludata_bank3 3EA 0 ABS 0
 RESET_VECT 0 1 CODE 0 0
 INT_VECT 8 3E9 CODE 8 0
 %locals
-build/default/production/Main.o
+build/default/debug/Main.o
 Main.s
 22 0 0 CODE 0
 29 4 0 CODE 0

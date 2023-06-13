@@ -4,13 +4,13 @@ Linker command line:
 
 -W-3 \
   --edf=C:/Users/juanm/.mchp_packs/Microchip/PIC16Fxxx_DFP/1.4.149/xc8\pic\dat\20230322214319_en.msgs \
-  -cs -h+dist/default/production\PIC-LightTracker.X.production.sym \
-  --cmf=dist/default/production\PIC-LightTracker.X.production.cmf -z \
-  -Q16F887 -oC:\Users\juanm\AppData\Local\Temp\xcAso0s.\driver_tmp_3.o \
+  -cs -h+dist/default/debug\PIC-LightTracker.X.debug.sym \
+  --cmf=dist/default/debug\PIC-LightTracker.X.debug.cmf -z -Q16F887 \
+  -oC:\Users\juanm\AppData\Local\Temp\xcAsiis.\driver_tmp_3.o \
   -pRESET_VECT=0h -pINT_VECT=4h --fixupoverflow=error \
   -ver=XC8 PIC(R) Assembler --fixupoverflow=lstwarn \
-  -Mdist/default/production/PIC-LightTracker.X.production.map -E1 \
-  --acfsm=1493 -ACODE=00h-07FFhx4 -ASTRCODE=00h-01FFFh -ASTRING=00h-0FFhx32 \
+  -Mdist/default/debug/PIC-LightTracker.X.debug.map -E1 --acfsm=1493 \
+  -ACODE=00h-07FFhx4 -ASTRCODE=00h-01FFFh -ASTRING=00h-0FFhx32 \
   -ACONST=00h-0FFhx32 -AENTRY=00h-0FFhx32 -ACOMMON=070h-07Fh \
   -ABANK0=020h-06Fh -ABANK1=0A0h-0EFh -ABANK2=0110h-016Fh \
   -ABANK3=0190h-01EFh -ARAM=020h-06Fh,0A0h-0EFh,0110h-016Fh,0190h-01EFh \
@@ -18,7 +18,7 @@ Linker command line:
   -ASFR1=080h-09Fh -ASFR2=0100h-010Fh -ASFR3=0180h-018Fh \
   -ACONFIG=02007h-02008h -DCONFIG=2 -AIDLOC=02000h-02003h -DIDLOC=2 \
   -AEEDATA=00h-0FFh/02100h -DEEDATA=2 -DCODE=2 -DSTRCODE=2 -DSTRING=2 \
-  -DCONST=2 -DENTRY=2 build/default/production/Main.o 
+  -DCONST=2 -DENTRY=2 build/default/debug/Main.o 
 
 Object code version is 3.11
 
@@ -27,7 +27,7 @@ Machine type is 16F887
 
 
                 Name                               Link     Load   Length Selector   Space Scale
-build/default/production/Main.o
+build/default/debug/Main.o
                 config                             2007     2007        2        0       4
                 INT_VECT                              4        4      1F1        8       0
                 RESET_VECT                            0        0        1        0       0

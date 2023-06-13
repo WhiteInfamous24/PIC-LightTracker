@@ -262,15 +262,13 @@ main:
     
 ; EUSART transmit pre-loaded value in W
 EUSARTtransmit:
-    BCF	    INTCON, 7		; clear GIE bit
     BANKSEL TXREG
     MOVWF   TXREG		; load the W data into TXREG
     BANKSEL TXSTA
-    BTFSS   TXSTA, 1		; check if the data has been sent
+    BTFSC   TXSTA, 1		; check if the data has been sent
     GOTO    $-1			; loop until the data has been sent
     
     ; end of EUSARTtransmit
-    BSF	    INTCON, 7		; set GIE bit
     CALL    setBANK_0
     RETURN
 
@@ -601,13 +599,15 @@ rotUp:
     
     ; increment stepper motor position
     BTFSC   LIMIT_SW_F, 0	; if the limit switch is in HIGH, don't increment position
-    GOTO    $+8
-    MOVLW   0x01
-    ADDWF   MOTOR_POS_0L, F
+    GOTO    $+10
+    MOVF    MOTOR_POS_0L, W
+    ADDLW   0x01
+    MOVWF   MOTOR_POS_0L
     BTFSS   STATUS, 0		; if there is CARRY, increment MOTOR_POS_0H
-    GOTO    $+3
-    MOVLW   0x01
-    ADDWF   MOTOR_POS_0H, F
+    GOTO    $+4
+    MOVF    MOTOR_POS_0H, W
+    ADDLW   0x01
+    MOVWF   MOTOR_POS_0H
     
     ; EUSART transmit information
     CALL    transmitPosition
@@ -624,11 +624,15 @@ rotDown:
     
     ; decrement stepper motor position
     BTFSC   LIMIT_SW_F, 1	; if the limit switch is in HIGH, don't decrement position
-    GOTO    $+6
+    GOTO    $+10
     MOVF    MOTOR_POS_0L, W
-    BTFSC   STATUS, 2		; if it's ZERO, decrement MOTOR_POS_0H
-    DECF    MOTOR_POS_0H, F
-    DECF    MOTOR_POS_0L, F
+    SUBLW   0x01
+    MOVWF   MOTOR_POS_0L
+    BTFSS   STATUS, 0		; if there is CARRY, decrement MOTOR_POS_0H
+    GOTO    $+4
+    MOVF    MOTOR_POS_0H, W
+    ADDLW   0x01
+    MOVWF   MOTOR_POS_0H
     
     ; EUSART transmit information
     CALL    transmitPosition
@@ -653,13 +657,15 @@ rotLeft:
     
     ; increment stepper motor position
     BTFSC   LIMIT_SW_F, 2	; if the limit switch is in HIGH, don't increment position
-    GOTO    $+8
-    MOVLW   0x01
-    ADDWF   MOTOR_POS_1L, F
-    BTFSS   STATUS, 0		; if there is CARRY, increment MOTOR_POS_0H
-    GOTO    $+3
-    MOVLW   0x01
-    ADDWF   MOTOR_POS_1H, F
+    GOTO    $+10
+    MOVF    MOTOR_POS_1L, W
+    ADDLW   0x01
+    MOVWF   MOTOR_POS_1L
+    BTFSS   STATUS, 0		; if there is CARRY, increment MOTOR_POS_1H
+    GOTO    $+4
+    MOVF    MOTOR_POS_1H, W
+    ADDLW   0x01
+    MOVWF   MOTOR_POS_1H
     
     ; EUSART transmit information
     CALL    transmitPosition
@@ -676,11 +682,15 @@ rotRight:
     
     ; decrement stepper motor position
     BTFSC   LIMIT_SW_F, 3	; if the limit switch is in HIGH, don't decrement position
-    GOTO    $+6
+    GOTO    $+10
     MOVF    MOTOR_POS_1L, W
-    BTFSC   STATUS, 2		; if it's ZERO, decrement MOTOR_POS_0H
-    DECF    MOTOR_POS_1H, F
-    DECF    MOTOR_POS_1L, F
+    SUBLW   0x01
+    MOVWF   MOTOR_POS_1L
+    BTFSS   STATUS, 0		; if there is CARRY, decrement MOTOR_POS_1H
+    GOTO    $+4
+    MOVF    MOTOR_POS_1H, W
+    ADDLW   0x01
+    MOVWF   MOTOR_POS_1H
     
     ; EUSART transmit information
     CALL    transmitPosition
@@ -718,9 +728,9 @@ transmitPosition:
     CALL    EUSARTtransmit
     
     ; transmit high nibble from motor 0 position high
-    MOVF    MOTOR_POS_0H, W
+    ;MOVF    MOTOR_POS_0H, W
     ;CALL    hexToASCIIhighConv
-    CALL    EUSARTtransmit
+    ;CALL    EUSARTtransmit
     
     ; transmit low nibble from motor 0 position high
     MOVF    MOTOR_POS_0H, W
@@ -728,9 +738,9 @@ transmitPosition:
     CALL    EUSARTtransmit
     
     ; transmit high nibble from motor 0 position low
-    MOVF    MOTOR_POS_0L, W
+    ;MOVF    MOTOR_POS_0L, W
     ;CALL    hexToASCIIhighConv
-    CALL    EUSARTtransmit
+    ;CALL    EUSARTtransmit
     
     ; transmit low nibble from motor 0 position low
     MOVF    MOTOR_POS_0L, W
@@ -738,9 +748,9 @@ transmitPosition:
     CALL    EUSARTtransmit
     
     ; transmit high nibble from motor 1 position high
-    MOVF    MOTOR_POS_1H, W
+    ;MOVF    MOTOR_POS_1H, W
     ;CALL    hexToASCIIhighConv
-    CALL    EUSARTtransmit
+    ;CALL    EUSARTtransmit
     
     ; transmit low nibble from motor 1 position high
     MOVF    MOTOR_POS_1H, W
@@ -748,9 +758,9 @@ transmitPosition:
     CALL    EUSARTtransmit
     
     ; transmit high nibble from motor 1 position low
-    MOVF    MOTOR_POS_1L, W
+    ;MOVF    MOTOR_POS_1L, W
     ;CALL    hexToASCIIhighConv
-    CALL    EUSARTtransmit
+    ;CALL    EUSARTtransmit
     
     ; transmit low nibble from motor 1 position low
     MOVF    MOTOR_POS_1L, W
