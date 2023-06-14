@@ -2542,6 +2542,26 @@ OP_MODE EQU 0x50 ; operation mode
 ; EUSART
 EUSARTreceived EQU 0x58 ; data received from EUSART
 
+; table to convert a W value from hexadecimal to ASCII
+hexToASCIItable:
+    ADDWF PCL, F
+    RETLW 0x30 ; ASCII '0'
+    RETLW 0x31 ; ASCII '1'
+    RETLW 0x32 ; ASCII '2'
+    RETLW 0x33 ; ASCII '3'
+    RETLW 0x34 ; ASCII '4'
+    RETLW 0x35 ; ASCII '5'
+    RETLW 0x36 ; ASCII '6'
+    RETLW 0x37 ; ASCII '7'
+    RETLW 0x38 ; ASCII '8'
+    RETLW 0x39 ; ASCII '9'
+    RETLW 0x41 ; ASCII 'A'
+    RETLW 0x42 ; ASCII 'B'
+    RETLW 0x43 ; ASCII 'C'
+    RETLW 0x44 ; ASCII 'D'
+    RETLW 0x45 ; ASCII 'E'
+    RETLW 0x46 ; ASCII 'F'
+
 ; program setup
 setup:
 
@@ -3177,73 +3197,50 @@ transmitPosition:
     MOVLW 0x0A
     CALL EUSARTtransmit
 
-    MOVLW 0x24
+    ; transmit high nibble from motor 0 position high
+    MOVF MOTOR_POS_0H, W
     CALL hexToASCIIhighConv
     CALL EUSARTtransmit
-    MOVLW 0x24
+
+    ; transmit low nibble from motor 0 position high
+    MOVF MOTOR_POS_0H, W
     CALL hexToASCIIlowConv
     CALL EUSARTtransmit
 
-    ; transmit high nibble from motor 0 position high
-; MOVF MOTOR_POS_0H, W
-; CALL hexToASCIIhighConv
-; CALL EUSARTtransmit
-
-    ; transmit low nibble from motor 0 position high
-; MOVF MOTOR_POS_0H, W
-; CALL hexToASCIIlowConv
-; CALL EUSARTtransmit
-
     ; transmit high nibble from motor 0 position low
-; MOVF MOTOR_POS_0L, W
-; CALL hexToASCIIhighConv
-; CALL EUSARTtransmit
+    MOVF MOTOR_POS_0L, W
+    CALL hexToASCIIhighConv
+    CALL EUSARTtransmit
 
     ; transmit low nibble from motor 0 position low
-; MOVF MOTOR_POS_0L, W
-; CALL hexToASCIIlowConv
-; CALL EUSARTtransmit
+    MOVF MOTOR_POS_0L, W
+    CALL hexToASCIIlowConv
+    CALL EUSARTtransmit
+
+    ; transmit space
+    MOVLW 0x20
+    CALL EUSARTtransmit
 
     ; transmit high nibble from motor 1 position high
-; MOVF MOTOR_POS_1H, W
-; CALL hexToASCIIhighConv
-; CALL EUSARTtransmit
+    MOVF MOTOR_POS_1H, W
+    CALL hexToASCIIhighConv
+    CALL EUSARTtransmit
 
     ; transmit low nibble from motor 1 position high
-; MOVF MOTOR_POS_1H, W
-; CALL hexToASCIIlowConv
-; CALL EUSARTtransmit
+    MOVF MOTOR_POS_1H, W
+    CALL hexToASCIIlowConv
+    CALL EUSARTtransmit
 
     ; transmit high nibble from motor 1 position low
-; MOVF MOTOR_POS_1L, W
-; CALL hexToASCIIhighConv
-; CALL EUSARTtransmit
+    MOVF MOTOR_POS_1L, W
+    CALL hexToASCIIhighConv
+    CALL EUSARTtransmit
 
     ; transmit low nibble from motor 1 position low
-; MOVF MOTOR_POS_1L, W
-; CALL hexToASCIIlowConv
-; CALL EUSARTtransmit
+    MOVF MOTOR_POS_1L, W
+    CALL hexToASCIIlowConv
+    CALL EUSARTtransmit
     RETURN
-
-; table to convert a W value from hexadecimal to ASCII
-hexToASCIItable:
-    ADDWF PCL, F
-    RETLW 0x30 ; ASCII '0'
-    RETLW 0x31 ; ASCII '1'
-    RETLW 0x32 ; ASCII '2'
-    RETLW 0x33 ; ASCII '3'
-    RETLW 0x34 ; ASCII '4'
-    RETLW 0x35 ; ASCII '5'
-    RETLW 0x36 ; ASCII '6'
-    RETLW 0x37 ; ASCII '7'
-    RETLW 0x38 ; ASCII '8'
-    RETLW 0x39 ; ASCII '9'
-    RETLW 0x41 ; ASCII 'A'
-    RETLW 0x42 ; ASCII 'B'
-    RETLW 0x43 ; ASCII 'C'
-    RETLW 0x44 ; ASCII 'D'
-    RETLW 0x45 ; ASCII 'E'
-    RETLW 0x46 ; ASCII 'F'
 
 ; convert the low nibble of W from hexadecimal to ASCII
 hexToASCIIlowConv:

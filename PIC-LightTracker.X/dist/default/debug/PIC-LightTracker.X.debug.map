@@ -6,7 +6,7 @@ Linker command line:
   --edf=C:/Users/juanm/.mchp_packs/Microchip/PIC16Fxxx_DFP/1.4.149/xc8\pic\dat\20230322214319_en.msgs \
   -cs -h+dist/default/debug\PIC-LightTracker.X.debug.sym \
   --cmf=dist/default/debug\PIC-LightTracker.X.debug.cmf -z -Q16F887 \
-  -oC:\Users\juanm\AppData\Local\Temp\xcAsf18.\driver_tmp_3.o \
+  -oC:\Users\juanm\AppData\Local\Temp\xcAsm28.\driver_tmp_3.o \
   -pRESET_VECT=0h -pINT_VECT=4h --fixupoverflow=error \
   -ver=XC8 PIC(R) Assembler --fixupoverflow=lstwarn \
   -Mdist/default/debug/PIC-LightTracker.X.debug.map -E1 --acfsm=1493 \
