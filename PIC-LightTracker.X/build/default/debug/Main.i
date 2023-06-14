@@ -2742,7 +2742,8 @@ EUSARTtransmit:
 EUSARTreceiveISR:
     BANKSEL RCREG
     MOVF RCREG, W
-    MOVWF EUSARTreceived ; save the received data into EUSARTreceived
+    CALL ASCIItoHexConv ; convert the data from ASCII to hexadecimal
+    MOVWF EUSARTreceived ; save the converted data into EUSARTreceived
 
     ; end of EUSARTreceiveISR
     RETURN
@@ -3242,6 +3243,18 @@ hexToASCIIhighConv:
     SWAPF VAR_TMP, W
     ANDLW 0b00001111
     CALL hexToASCIItable
+    RETURN
+
+; convert a value in W from ASCII to hexadecimal
+ASCIItoHexConv:
+    MOVWF VAR_TMP ; save the value of W temporary
+    SUBLW 'A'
+    BTFSC STATUS, 0 ; if there is ((STATUS) and 07Fh), 0 skip
+    GOTO $+3
+    ADDLW 0x0A ; if there is ((STATUS) and 07Fh), 0 add 0x0A
+    GOTO $+3
+    MOVF VAR_TMP, W ; if there isn't CARRY restore the original W value and substract ASCII '0'
+    SUBLW '0'
     RETURN
 
 ; set memory bank 0

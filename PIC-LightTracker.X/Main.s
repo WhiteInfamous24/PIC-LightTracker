@@ -94,7 +94,7 @@ OP_MODE		EQU 0x50	; operation mode
 ; EUSART
 EUSARTreceived	EQU 0x58	; data received from EUSART
 
-; table to convert a W value from hexadecimal to ASCII
+; table to convert a value in W from hexadecimal to ASCII
 hexToASCIItable:
     ADDWF   PCL, F
     RETLW   '0'			; ASCII 0x30
@@ -294,7 +294,7 @@ EUSARTtransmit:
 EUSARTreceiveISR:
     BANKSEL RCREG
     MOVF    RCREG, W
-    MOVWF   EUSARTreceived	; load the received data into EUSARTreceived
+    MOVWF   EUSARTreceived	; save the received data into EUSARTreceived
     
     ; end of EUSARTreceiveISR
     RETURN
