@@ -2545,22 +2545,22 @@ EUSARTreceived EQU 0x58 ; data received from EUSART
 ; table to convert a W value from hexadecimal to ASCII
 hexToASCIItable:
     ADDWF PCL, F
-    RETLW 0x30 ; ASCII '0'
-    RETLW 0x31 ; ASCII '1'
-    RETLW 0x32 ; ASCII '2'
-    RETLW 0x33 ; ASCII '3'
-    RETLW 0x34 ; ASCII '4'
-    RETLW 0x35 ; ASCII '5'
-    RETLW 0x36 ; ASCII '6'
-    RETLW 0x37 ; ASCII '7'
-    RETLW 0x38 ; ASCII '8'
-    RETLW 0x39 ; ASCII '9'
-    RETLW 0x41 ; ASCII 'A'
-    RETLW 0x42 ; ASCII 'B'
-    RETLW 0x43 ; ASCII 'C'
-    RETLW 0x44 ; ASCII 'D'
-    RETLW 0x45 ; ASCII 'E'
-    RETLW 0x46 ; ASCII 'F'
+    RETLW '0' ; ASCII 0x30
+    RETLW '1' ; ASCII 0x31
+    RETLW '2' ; ASCII 0x32
+    RETLW '3' ; ASCII 0x33
+    RETLW '4' ; ASCII 0x34
+    RETLW '5' ; ASCII 0x35
+    RETLW '6' ; ASCII 0x36
+    RETLW '7' ; ASCII 0x37
+    RETLW '8' ; ASCII 0x38
+    RETLW '9' ; ASCII 0x39
+    RETLW 'A' ; ASCII 0x41
+    RETLW 'B' ; ASCII 0x42
+    RETLW 'C' ; ASCII 0x43
+    RETLW 'D' ; ASCII 0x44
+    RETLW 'E' ; ASCII 0x45
+    RETLW 'F' ; ASCII 0x46
 
 ; program setup
 setup:
@@ -2585,8 +2585,8 @@ setup:
     CLRF TRISD ; set <((PORTD) and 07Fh), 0:((PORTD) and 07Fh), 7> as outputs
 
     ; general ports configurations
-    BANKSEL OPTION_REG ; enables global pull-ups and set pre-scaler (100=fast, 110=slow)
-    MOVLW 0b00000100 ; | /RBPU | ((OPTION_REG) and 07Fh), 6 | ((OPTION_REG) and 07Fh), 5 | ((OPTION_REG) and 07Fh), 4 | ((OPTION_REG) and 07Fh), 3 | ((OPTION_REG) and 07Fh), 2 | ((OPTION_REG) and 07Fh), 1 | ((OPTION_REG) and 07Fh), 0 |
+    BANKSEL OPTION_REG ; enables global pull-ups and set pre-scaler (011=fast, 110=slow)
+    MOVLW 0b00000011 ; | /RBPU | ((OPTION_REG) and 07Fh), 6 | ((OPTION_REG) and 07Fh), 5 | ((OPTION_REG) and 07Fh), 4 | ((OPTION_REG) and 07Fh), 3 | ((OPTION_REG) and 07Fh), 2 | ((OPTION_REG) and 07Fh), 1 | ((OPTION_REG) and 07Fh), 0 |
     MOVWF OPTION_REG
     BANKSEL WPUB
     MOVLW 0b11111111 ; enable pull-ups in <((PORTB) and 07Fh), 0:((PORTB) and 07Fh), 7>
@@ -2655,6 +2655,18 @@ setup:
     CLRF MOTOR_POS_1L ; clear register
     CLRF MOTOR_POS_1H ; clear register
     CLRF OP_MODE ; clear register
+
+    ; DEBUG
+    MOVLW 0x0F
+    MOVWF STEP_CNTR_AUX
+    CALL rotUp
+    DECFSZ STEP_CNTR_AUX
+    GOTO $-2
+    MOVLW 0x0F
+    MOVWF STEP_CNTR_AUX
+    CALL rotDown
+    DECFSZ STEP_CNTR_AUX
+    GOTO $-2
 
     ; axis recognition sequence
     CALL moveDownToLimitSw
@@ -3094,15 +3106,11 @@ rotDown:
 
     ; decrement stepper motor position
     BTFSC LIMIT_SW_F, 1 ; if the limit switch is in HIGH, don't decrement position
-    GOTO $+10
+    GOTO $+6
     MOVF MOTOR_POS_0L, W
-    SUBLW 0x01
-    MOVWF MOTOR_POS_0L
-    BTFSS STATUS, 0 ; if there is ((STATUS) and 07Fh), 0, decrement MOTOR_POS_0H
-    GOTO $+4
-    MOVF MOTOR_POS_0H, W
-    ADDLW 0x01
-    MOVWF MOTOR_POS_0H
+    BTFSC STATUS, 2 ; if it is ((STATUS) and 07Fh), 2, decrement MOTOR_POS_0H
+    DECF MOTOR_POS_0H
+    DECF MOTOR_POS_0L
 
     ; EUSART transmit information
     CALL transmitPosition
@@ -3152,15 +3160,11 @@ rotRight:
 
     ; decrement stepper motor position
     BTFSC LIMIT_SW_F, 3 ; if the limit switch is in HIGH, don't decrement position
-    GOTO $+10
+    GOTO $+6
     MOVF MOTOR_POS_1L, W
-    SUBLW 0x01
-    MOVWF MOTOR_POS_1L
-    BTFSS STATUS, 0 ; if there is ((STATUS) and 07Fh), 0, decrement MOTOR_POS_1H
-    GOTO $+4
-    MOVF MOTOR_POS_1H, W
-    ADDLW 0x01
-    MOVWF MOTOR_POS_1H
+    BTFSC STATUS, 2 ; if it is ((STATUS) and 07Fh), 2, decrement MOTOR_POS_1H
+    DECF MOTOR_POS_1H
+    DECF MOTOR_POS_1L
 
     ; EUSART transmit information
     CALL transmitPosition
@@ -3197,52 +3201,49 @@ transmitPosition:
     MOVLW 0x0A
     CALL EUSARTtransmit
 
-    MOVLW 0x24
+    ; transmit high nibble from motor 0 position high
+    MOVF MOTOR_POS_0H, W
     CALL hexToASCIIhighConv
     CALL EUSARTtransmit
-    MOVLW 0x24
+
+    ; transmit low nibble from motor 0 position high
+    MOVF MOTOR_POS_0H, W
     CALL hexToASCIIlowConv
     CALL EUSARTtransmit
 
-    ; transmit high nibble from motor 0 position high
-; MOVF MOTOR_POS_0H, W
-; CALL hexToASCIIhighConv
-; CALL EUSARTtransmit
-
-    ; transmit low nibble from motor 0 position high
-; MOVF MOTOR_POS_0H, W
-; CALL hexToASCIIlowConv
-; CALL EUSARTtransmit
-
     ; transmit high nibble from motor 0 position low
-; MOVF MOTOR_POS_0L, W
-; CALL hexToASCIIhighConv
-; CALL EUSARTtransmit
+    MOVF MOTOR_POS_0L, W
+    CALL hexToASCIIhighConv
+    CALL EUSARTtransmit
 
     ; transmit low nibble from motor 0 position low
-; MOVF MOTOR_POS_0L, W
-; CALL hexToASCIIlowConv
-; CALL EUSARTtransmit
+    MOVF MOTOR_POS_0L, W
+    CALL hexToASCIIlowConv
+    CALL EUSARTtransmit
+
+    ; transmit space
+    MOVLW 0x20
+    CALL EUSARTtransmit
 
     ; transmit high nibble from motor 1 position high
-; MOVF MOTOR_POS_1H, W
-; CALL hexToASCIIhighConv
-; CALL EUSARTtransmit
+    MOVF MOTOR_POS_1H, W
+    CALL hexToASCIIhighConv
+    CALL EUSARTtransmit
 
     ; transmit low nibble from motor 1 position high
-; MOVF MOTOR_POS_1H, W
-; CALL hexToASCIIlowConv
-; CALL EUSARTtransmit
+    MOVF MOTOR_POS_1H, W
+    CALL hexToASCIIlowConv
+    CALL EUSARTtransmit
 
     ; transmit high nibble from motor 1 position low
-; MOVF MOTOR_POS_1L, W
-; CALL hexToASCIIhighConv
-; CALL EUSARTtransmit
+    MOVF MOTOR_POS_1L, W
+    CALL hexToASCIIhighConv
+    CALL EUSARTtransmit
 
     ; transmit low nibble from motor 1 position low
-; MOVF MOTOR_POS_1L, W
-; CALL hexToASCIIlowConv
-; CALL EUSARTtransmit
+    MOVF MOTOR_POS_1L, W
+    CALL hexToASCIIlowConv
+    CALL EUSARTtransmit
     RETURN
 
 ; convert the low nibble of W from hexadecimal to ASCII

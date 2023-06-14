@@ -97,22 +97,22 @@ EUSARTreceived	EQU 0x58	; data received from EUSART
 ; table to convert a W value from hexadecimal to ASCII
 hexToASCIItable:
     ADDWF   PCL, F
-    RETLW   0x30		; ASCII '0'
-    RETLW   0x31		; ASCII '1'
-    RETLW   0x32		; ASCII '2'
-    RETLW   0x33		; ASCII '3'
-    RETLW   0x34		; ASCII '4'
-    RETLW   0x35		; ASCII '5'
-    RETLW   0x36		; ASCII '6'
-    RETLW   0x37		; ASCII '7'
-    RETLW   0x38		; ASCII '8'
-    RETLW   0x39		; ASCII '9'
-    RETLW   0x41		; ASCII 'A'
-    RETLW   0x42		; ASCII 'B'
-    RETLW   0x43		; ASCII 'C'
-    RETLW   0x44		; ASCII 'D'
-    RETLW   0x45		; ASCII 'E'
-    RETLW   0x46		; ASCII 'F'
+    RETLW   '0'			; ASCII 0x30
+    RETLW   '1'			; ASCII 0x31
+    RETLW   '2'			; ASCII 0x32
+    RETLW   '3'			; ASCII 0x33
+    RETLW   '4'			; ASCII 0x34
+    RETLW   '5'			; ASCII 0x35
+    RETLW   '6'			; ASCII 0x36
+    RETLW   '7'			; ASCII 0x37
+    RETLW   '8'			; ASCII 0x38
+    RETLW   '9'			; ASCII 0x39
+    RETLW   'A'			; ASCII 0x41
+    RETLW   'B'			; ASCII 0x42
+    RETLW   'C'			; ASCII 0x43
+    RETLW   'D'			; ASCII 0x44
+    RETLW   'E'			; ASCII 0x45
+    RETLW   'F'			; ASCII 0x46
 
 ; program setup
 setup:
@@ -137,8 +137,8 @@ setup:
     CLRF    TRISD		; set <RD0:RD7> as outputs
     
     ; general ports configurations
-    BANKSEL OPTION_REG		; enables global pull-ups and set pre-scaler (100=fast, 110=slow)
-    MOVLW   0b00000100		; | /RBPU | INTEDG | T0CS | T0SE | PSA | PS2 | PS1 | PS0 |
+    BANKSEL OPTION_REG		; enables global pull-ups and set pre-scaler (011=fast, 110=slow)
+    MOVLW   0b00000011		; | /RBPU | INTEDG | T0CS | T0SE | PSA | PS2 | PS1 | PS0 |
     MOVWF   OPTION_REG
     BANKSEL WPUB
     MOVLW   0b11111111		; enable pull-ups in <RB0:RB7>
@@ -211,8 +211,6 @@ setup:
     ; axis recognition sequence
     CALL    moveDownToLimitSw
     CALL    getDelay
-;    CALL    moveUpToLimitSw
-;    CALL    getDelay
     MOVLW   0xAC
     MOVWF   STEP_CNTR_AUX
     CALL    rotUp
@@ -220,8 +218,6 @@ setup:
     GOTO    $-2
     CALL    moveRightToLimitSw
     CALL    getDelay
-;    CALL    moveLeftToLimitSw
-;    CALL    getDelay
     MOVLW   0xD0
     MOVWF   STEP_CNTR_AUX
     CALL    rotLeft
@@ -646,15 +642,11 @@ rotDown:
     
     ; decrement stepper motor position
     BTFSC   LIMIT_SW_F, 1	; if the limit switch is in HIGH, don't decrement position
-    GOTO    $+10
+    GOTO    $+6
     MOVF    MOTOR_POS_0L, W
-    SUBLW   0x01
-    MOVWF   MOTOR_POS_0L
-    BTFSS   STATUS, 0		; if there is CARRY, decrement MOTOR_POS_0H
-    GOTO    $+4
-    MOVF    MOTOR_POS_0H, W
-    ADDLW   0x01
-    MOVWF   MOTOR_POS_0H
+    BTFSC   STATUS, 2		; if it is ZERO, decrement MOTOR_POS_0H
+    DECF    MOTOR_POS_0H
+    DECF    MOTOR_POS_0L
     
     ; EUSART transmit information
     CALL    transmitPosition
@@ -704,15 +696,11 @@ rotRight:
     
     ; decrement stepper motor position
     BTFSC   LIMIT_SW_F, 3	; if the limit switch is in HIGH, don't decrement position
-    GOTO    $+10
+    GOTO    $+6
     MOVF    MOTOR_POS_1L, W
-    SUBLW   0x01
-    MOVWF   MOTOR_POS_1L
-    BTFSS   STATUS, 0		; if there is CARRY, decrement MOTOR_POS_1H
-    GOTO    $+4
-    MOVF    MOTOR_POS_1H, W
-    ADDLW   0x01
-    MOVWF   MOTOR_POS_1H
+    BTFSC   STATUS, 2		; if it is ZERO, decrement MOTOR_POS_1H
+    DECF    MOTOR_POS_1H
+    DECF    MOTOR_POS_1L
     
     ; EUSART transmit information
     CALL    transmitPosition
