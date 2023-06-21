@@ -2544,7 +2544,7 @@ EUSARTreceived EQU 0x58 ; data received from EUSART
 
 ; table to convert a value in W from hexadecimal to ASCII
 hexToASCIItable:
-    ADDWF PCL, F
+    ADDWF $, F
     RETLW '0' ; ASCII 0x30
     RETLW '1' ; ASCII 0x31
     RETLW '2' ; ASCII 0x32
@@ -2767,7 +2767,7 @@ ADCISR:
     MOVF ADRESH, W
     MOVWF INDF
 
-    ; increment adc port iterator and reset to AN1_VALUE position if necessary
+    ; increment ADC port iterator and reset to AN1_VALUE position if necessary
     INCF ADC_PORT_IT, F
     MOVF ADC_PORT_IT, W
     SUBLW ADC_PORT_IT
@@ -2933,42 +2933,42 @@ kybrdToHexConv:
     ; add bit 7 (accumulator + 0)
     BTFSS KYBRD_BTN, 7
     GOTO $+2
-    ADDLW 0x00 ; value to add
+    ADDLW 0x00
 
     ; add bit 6 (accumulator + 1)
     BTFSS KYBRD_BTN, 6
     GOTO $+2
-    ADDLW 0x01 ; value to add
+    ADDLW 0x01
 
     ; add bit 5 (accumulator + 2)
     BTFSS KYBRD_BTN, 5
     GOTO $+2
-    ADDLW 0x02 ; value to add
+    ADDLW 0x02
 
     ; add bit 4 (accumulator + 3)
     BTFSS KYBRD_BTN, 4
     GOTO $+2
-    ADDLW 0x03 ; value to add
+    ADDLW 0x03
 
     ; add bit 3 (accumulator + 0)
     BTFSS KYBRD_BTN, 3
     GOTO $+2
-    ADDLW 0x00 ; value to add
+    ADDLW 0x00
 
     ; add bit 2 (accumulator + 4)
     BTFSS KYBRD_BTN, 2
     GOTO $+2
-    ADDLW 0x04 ; value to add
+    ADDLW 0x04
 
     ; add bit 1 (accumulator + 8)
     BTFSS KYBRD_BTN, 1
     GOTO $+2
-    ADDLW 0x08 ; value to add
+    ADDLW 0x08
 
     ; add bit 0 (accumulator + 12)
     BTFSS KYBRD_BTN, 0
     GOTO $+2
-    ADDLW 0x0C ; value to add
+    ADDLW 0x0C
 
     ; add null
     MOVWF KYBRD_BTN
